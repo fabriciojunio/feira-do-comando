@@ -1,0 +1,29 @@
+# Configuracao dos testes.
+#
+# O MongoDB e iniciado pelo proprio teste, sem Docker. A versao precisa ser
+# declarada: a biblioteca nao escolhe uma por conta, de proposito, para o teste
+# nao passar a rodar contra uma versao diferente da de producao sem ninguem
+# perceber.
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 7.0.14
+
+spring:
+  data:
+    mongodb:
+      database: feira_consulta_teste
+      auto-index-creation: true
+
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers}
+    consumer:
+      group-id: consulta-teste
+      auto-offset-reset: earliest
+
+logging:
+  level:
+    org.mongodb.driver: WARN
+    de.flapdoodle: WARN
+    org.apache.kafka: WARN

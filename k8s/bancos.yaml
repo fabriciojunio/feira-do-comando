@@ -1,0 +1,228 @@
+# Um banco por servico.
+#
+# Nao e exagero de infraestrutura: e o que impede o acoplamento de voltar pela
+# porta dos fundos. Com banco compartilhado, um servico consegue escrever na
+# tabela do vizinho dentro da mesma transacao, e ai o outbox deixa de ter
+# proposito porque a consistencia volta a ser garantida pelo banco.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banco-pedidos
+  namespace: feira
+spec:
+  clusterIP: None
+  selector:
+    app: banco-pedidos
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: banco-pedidos
+  namespace: feira
+spec:
+  serviceName: banco-pedidos
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banco-pedidos
+  template:
+    metadata:
+      labels:
+        app: banco-pedidos
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: feira_pedidos
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_PASSWORD
+            # O diretorio de dados fica num subcaminho do volume. Sem isso o
+            # initdb reclama de lost+found no ponto de montagem.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "feira", "-d", "feira_pedidos"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banco-estoque
+  namespace: feira
+spec:
+  clusterIP: None
+  selector:
+    app: banco-estoque
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: banco-estoque
+  namespace: feira
+spec:
+  serviceName: banco-estoque
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banco-estoque
+  template:
+    metadata:
+      labels:
+        app: banco-estoque
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: feira_estoque
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_PASSWORD
+            # O diretorio de dados fica num subcaminho do volume. Sem isso o
+            # initdb reclama de lost+found no ponto de montagem.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "feira", "-d", "feira_estoque"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: banco-pagamentos
+  namespace: feira
+spec:
+  clusterIP: None
+  selector:
+    app: banco-pagamentos
+  ports:
+    - port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: banco-pagamentos
+  namespace: feira
+spec:
+  serviceName: banco-pagamentos
+  replicas: 1
+  selector:
+    matchLabels:
+      app: banco-pagamentos
+  template:
+    metadata:
+      labels:
+        app: banco-pagamentos
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - name: POSTGRES_DB
+              value: feira_pagamentos
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: feira-banco
+                  key: DATABASE_PASSWORD
+            # O diretorio de dados fica num subcaminho do volume. Sem isso o
+            # initdb reclama de lost+found no ponto de montagem.
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          ports:
+            - containerPort: 5432
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "feira", "-d", "feira_pagamentos"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: dados
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 2Gi

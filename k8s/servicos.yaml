@@ -1,0 +1,428 @@
+# Os tres servicos.
+#
+# Duas replicas cada, e isso e possivel por causa do SKIP LOCKED no outbox: as
+# instancias disputam a mesma tabela de mensagens sem travar uma na outra e sem
+# publicar a mesma mensagem duas vezes.
+#
+# A imagem aponta para :latest de proposito neste arquivo, que serve de exemplo
+# de leitura. Num cluster de verdade a tag e a do commit, senao nao da para
+# saber o que esta rodando nem voltar atras.
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servico-pedidos
+  namespace: feira
+spec:
+  selector:
+    app: servico-pedidos
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servico-pedidos
+  namespace: feira
+  labels:
+    app: servico-pedidos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: servico-pedidos
+  template:
+    metadata:
+      labels:
+        app: servico-pedidos
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8081"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: app
+          image: ghcr.io/fabriciojunio/feira-servico-pedidos:latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:postgresql://banco-pedidos:5432/feira_pedidos
+            - name: PORT
+              value: "8081"
+          envFrom:
+            - configMapRef:
+                name: feira-config
+            - secretRef:
+                name: feira-banco
+          ports:
+            - name: http
+              containerPort: 8081
+          # Tres sondas, cada uma respondendo a uma pergunta diferente.
+          # startup: ja terminou de subir? A JVM com Flyway demora, e sem ela
+          #   a liveness mataria o pod no meio da migracao.
+          # readiness: pode receber trafego agora?
+          # liveness: travou de vez e precisa ser reiniciado?
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # A raiz e somente leitura, mas a JVM precisa escrever em /tmp.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: servico-pedidos
+  namespace: feira
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: servico-pedidos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servico-estoque
+  namespace: feira
+spec:
+  selector:
+    app: servico-estoque
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8082
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servico-estoque
+  namespace: feira
+  labels:
+    app: servico-estoque
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: servico-estoque
+  template:
+    metadata:
+      labels:
+        app: servico-estoque
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8082"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: app
+          image: ghcr.io/fabriciojunio/feira-servico-estoque:latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:postgresql://banco-estoque:5432/feira_estoque
+            - name: PORT
+              value: "8082"
+          envFrom:
+            - configMapRef:
+                name: feira-config
+            - secretRef:
+                name: feira-banco
+          ports:
+            - name: http
+              containerPort: 8082
+          # Tres sondas, cada uma respondendo a uma pergunta diferente.
+          # startup: ja terminou de subir? A JVM com Flyway demora, e sem ela
+          #   a liveness mataria o pod no meio da migracao.
+          # readiness: pode receber trafego agora?
+          # liveness: travou de vez e precisa ser reiniciado?
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # A raiz e somente leitura, mas a JVM precisa escrever em /tmp.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: servico-estoque
+  namespace: feira
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: servico-estoque
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servico-pagamentos
+  namespace: feira
+spec:
+  selector:
+    app: servico-pagamentos
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servico-pagamentos
+  namespace: feira
+  labels:
+    app: servico-pagamentos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: servico-pagamentos
+  template:
+    metadata:
+      labels:
+        app: servico-pagamentos
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8083"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: app
+          image: ghcr.io/fabriciojunio/feira-servico-pagamentos:latest
+          env:
+            - name: DATABASE_URL
+              value: jdbc:postgresql://banco-pagamentos:5432/feira_pagamentos
+            - name: PORT
+              value: "8083"
+          envFrom:
+            - configMapRef:
+                name: feira-config
+            - secretRef:
+                name: feira-banco
+          ports:
+            - name: http
+              containerPort: 8083
+          # Tres sondas, cada uma respondendo a uma pergunta diferente.
+          # startup: ja terminou de subir? A JVM com Flyway demora, e sem ela
+          #   a liveness mataria o pod no meio da migracao.
+          # readiness: pode receber trafego agora?
+          # liveness: travou de vez e precisa ser reiniciado?
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # A raiz e somente leitura, mas a JVM precisa escrever em /tmp.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: servico-pagamentos
+  namespace: feira
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: servico-pagamentos
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: servico-consulta
+  namespace: feira
+spec:
+  selector:
+    app: servico-consulta
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8084
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: servico-consulta
+  namespace: feira
+  labels:
+    app: servico-consulta
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: servico-consulta
+  template:
+    metadata:
+      labels:
+        app: servico-consulta
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /actuator/prometheus
+        prometheus.io/port: "8084"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: app
+          image: ghcr.io/fabriciojunio/feira-servico-consulta:latest
+          env:
+            # Sem DATABASE_URL: este servico nao tem banco relacional.
+            # O modelo de leitura vive no MongoDB, e o documento e derivado
+            # dos eventos, entao pode ser reconstruido do topico.
+            - name: MONGO_URI
+              value: mongodb://mongo:27017/feira_consulta
+            - name: PORT
+              value: "8084"
+          envFrom:
+            - configMapRef:
+                name: feira-config
+            - secretRef:
+                name: feira-banco
+          ports:
+            - name: http
+              containerPort: 8084
+          # Tres sondas, cada uma respondendo a uma pergunta diferente.
+          # startup: ja terminou de subir? A JVM com Flyway demora, e sem ela
+          #   a liveness mataria o pod no meio da migracao.
+          # readiness: pode receber trafego agora?
+          # liveness: travou de vez e precisa ser reiniciado?
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: http
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: http
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # A raiz e somente leitura, mas a JVM precisa escrever em /tmp.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: servico-consulta
+  namespace: feira
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: servico-consulta

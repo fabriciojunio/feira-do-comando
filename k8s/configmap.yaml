@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: feira-config
+  namespace: feira
+data:
+  KAFKA_BOOTSTRAP: "broker:9092"
+  # O intervalo do outbox e o compromisso entre latencia e carga no banco.
+  # Cada tique e uma consulta com SKIP LOCKED por instancia.
+  FEIRA_OUTBOX_INTERVALO_MS: "500"

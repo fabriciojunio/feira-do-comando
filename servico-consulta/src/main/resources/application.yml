@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: feira-consulta
+
+  data:
+    mongodb:
+      uri: ${MONGO_URI:mongodb://localhost:27017/feira_consulta}
+      auto-index-creation: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      # Grupo proprio: reconstruir a projecao e reposicionar so este grupo,
+      # sem tocar nos servicos de negocio.
+      group-id: consulta
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+server:
+  port: ${PORT:8084}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    br.com.feira: ${LOG_LEVEL:INFO}

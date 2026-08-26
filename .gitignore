@@ -1,0 +1,19 @@
+target/
+*.class
+node_modules/
+dist/
+.env
+.env.local
+.idea/
+.vscode/
+*.iml
+web/dist/
+web/node_modules/
+
+# Terraform: estado e provedores baixados nao vao para o repositorio.
+# O estado guarda valor sensivel em texto claro, inclusive senha de banco.
+infra/.terraform/
+infra/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfvars

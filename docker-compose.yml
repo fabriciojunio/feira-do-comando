@@ -1,0 +1,179 @@
+# Ambiente local completo: broker, tres bancos e os tres servicos.
+#
+# Um banco por servico, e nao um banco com tres esquemas. E o ponto do
+# desenho: se os servicos compartilhassem banco, o acoplamento voltaria pela
+# porta dos fundos e o outbox perderia o sentido, porque daria para escrever
+# na tabela do vizinho dentro da mesma transacao.
+#
+#   docker compose up -d
+#   docker compose logs -f servico-pedidos
+#
+# Para desenvolver so um servico, suba a infraestrutura e rode o resto na IDE:
+#   docker compose up -d broker banco-pedidos banco-estoque banco-pagamentos
+
+services:
+  # Redpanda no lugar do Kafka da Apache: mesma API, um binario so, sem
+  # ZooKeeper e com consumo de memoria que cabe numa maquina de trabalho.
+  broker:
+    image: redpandadata/redpanda:v24.2.7
+    container_name: feira-broker
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:29092,OUTSIDE://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://broker:29092,OUTSIDE://localhost:9092
+    ports:
+      - "9092:9092"
+      - "9644:9644"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  console:
+    image: redpandadata/console:v2.7.2
+    container_name: feira-console
+    depends_on:
+      broker:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS: broker:29092
+    ports:
+      - "8090:8080"
+
+  banco-pedidos:
+    image: postgres:16-alpine
+    container_name: feira-banco-pedidos
+    environment:
+      POSTGRES_DB: feira_pedidos
+      POSTGRES_USER: feira
+      POSTGRES_PASSWORD: feira
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feira -d feira_pedidos"]
+      interval: 5s
+      retries: 10
+
+  banco-estoque:
+    image: postgres:16-alpine
+    container_name: feira-banco-estoque
+    environment:
+      POSTGRES_DB: feira_estoque
+      POSTGRES_USER: feira
+      POSTGRES_PASSWORD: feira
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feira -d feira_estoque"]
+      interval: 5s
+      retries: 10
+
+  banco-pagamentos:
+    image: postgres:16-alpine
+    container_name: feira-banco-pagamentos
+    environment:
+      POSTGRES_DB: feira_pagamentos
+      POSTGRES_USER: feira
+      POSTGRES_PASSWORD: feira
+    ports:
+      - "5435:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feira -d feira_pagamentos"]
+      interval: 5s
+      retries: 10
+
+  # MongoDB do modelo de leitura. Sem volume nomeado de proposito: este dado e
+  # derivado dos eventos, entao perder o container nao perde nada que o topico
+  # nao reconstrua.
+  mongo:
+    image: mongo:7.0
+    container_name: feira-mongo
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  servico-pedidos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULO: servico-pedidos
+    container_name: feira-pedidos
+    depends_on:
+      broker: {condition: service_healthy}
+      banco-pedidos: {condition: service_healthy}
+    environment:
+      DATABASE_URL: jdbc:postgresql://banco-pedidos:5432/feira_pedidos
+      DATABASE_USER: feira
+      DATABASE_PASSWORD: feira
+      KAFKA_BOOTSTRAP: broker:29092
+      PORT: 8081
+    ports:
+      - "8081:8081"
+
+  servico-estoque:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULO: servico-estoque
+    container_name: feira-estoque
+    depends_on:
+      broker: {condition: service_healthy}
+      banco-estoque: {condition: service_healthy}
+    environment:
+      DATABASE_URL: jdbc:postgresql://banco-estoque:5432/feira_estoque
+      DATABASE_USER: feira
+      DATABASE_PASSWORD: feira
+      KAFKA_BOOTSTRAP: broker:29092
+      PORT: 8082
+    ports:
+      - "8082:8082"
+
+  servico-pagamentos:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULO: servico-pagamentos
+    container_name: feira-pagamentos
+    depends_on:
+      broker: {condition: service_healthy}
+      banco-pagamentos: {condition: service_healthy}
+    environment:
+      DATABASE_URL: jdbc:postgresql://banco-pagamentos:5432/feira_pagamentos
+      DATABASE_USER: feira
+      DATABASE_PASSWORD: feira
+      KAFKA_BOOTSTRAP: broker:29092
+      PORT: 8083
+      PERCENTUAL_DE_RECUSA: 12
+    ports:
+      - "8083:8083"
+
+  servico-consulta:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        MODULO: servico-consulta
+    container_name: feira-consulta
+    depends_on:
+      broker: {condition: service_healthy}
+      mongo: {condition: service_healthy}
+    environment:
+      MONGO_URI: mongodb://mongo:27017/feira_consulta
+      KAFKA_BOOTSTRAP: broker:29092
+      PORT: 8084
+    ports:
+      - "8084:8084"

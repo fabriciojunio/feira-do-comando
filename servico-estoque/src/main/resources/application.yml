@@ -1,0 +1,107 @@
+spring:
+  application:
+    name: feira-estoque
+
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/feira_estoque}
+    username: ${DATABASE_USER:feira}
+    password: ${DATABASE_PASSWORD:feira}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: 2
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # O Flyway manda no esquema. Deixar o Hibernate criar tabela em producao
+      # e como se perde coluna em deploy.
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          batch_size: 30
+        order_inserts: true
+        order_updates: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP:localhost:9092}
+    consumer:
+      group-id: ${KAFKA_GROUP:feira-estoque}
+      auto-offset-reset: earliest
+      enable-auto-commit: false
+    producer:
+      # Espera confirmacao de todas as replicas. Mais lento e o unico ajuste
+      # aceitavel para evento de pedido: acks=1 perde mensagem quando o lider
+      # cai antes de replicar.
+      acks: all
+      # Produtor idempotente: o broker descarta duplicata gerada por retry
+      # interno do proprio cliente.
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
+      retries: 10
+    listener:
+      ack-mode: record
+      missing-topics-fatal: false
+
+  threads:
+    virtual:
+      # Virtual threads com JDBC bloqueante. E a combinacao que o Spring Boot 3
+      # recomenda para API REST: a simplicidade do codigo imperativo com a
+      # escalabilidade que antes exigia programacao reativa.
+      enabled: true
+
+server:
+  port: ${PORT:8082}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: when-authorized
+  metrics:
+    tags:
+      servico: estoque
+  tracing:
+    sampling:
+      probability: ${TRACE_SAMPLING:0.1}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    root: INFO
+    br.com.feira: ${LOG_LEVEL:INFO}
+  pattern:
+    # O id de correlacao entra no log de cada requisicao e de cada evento. Sem
+    # isso, investigar um pedido significa cruzar horario entre tres servicos.
+    level: "%5p [${spring.application.name:},%X{traceId:-},%X{spanId:-}]"
+
+feira:
+  outbox:
+    intervalo-ms: 500
+    intervalo-metrica-ms: 15000
+    cron-expurgo: "0 30 3 * * *"
+  kafka:
+    concorrencia: 3
+  estoque:
+    # Alerta de mercadoria presa: reserva ativa ha mais que isto significa que
+    # o servico de pedidos parou de responder e o galpao esta segurando peca
+    # que poderia estar vendendo.
+    prazo-de-reserva-minutos: 20
+    cron-alerta: "0 */5 * * * *"

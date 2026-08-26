@@ -1,0 +1,187 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build e testes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Instalar Java 21
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # A suite inteira roda aqui, inclusive os testes que sobem PostgreSQL e
+      # Kafka. Nenhum precisa de Docker: o Postgres e embutido e o broker vem
+      # do spring-kafka-test. Separar isso num job opcional significaria que o
+      # unico teste capaz de provar a saga so roda quando alguem lembra.
+      - name: Testes
+        run: mvn -B verify
+
+      - name: Guardar relatorios
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: relatorios-de-teste
+          path: '**/target/surefire-reports/'
+          retention-days: 7
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  imagens:
+    name: Imagens Docker
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        modulo: [servico-pedidos, servico-estoque, servico-pagamentos, servico-consulta]
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Construir ${{ matrix.modulo }}
+        run: docker build --build-arg MODULO=${{ matrix.modulo }} -t feira/${{ matrix.modulo }}:ci .
+
+  manifestos:
+    name: Manifestos Kubernetes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Sem cluster nenhum: o kubeconform confere os manifestos contra os
+      # esquemas da API do Kubernetes. Pega apiVersion errada, campo com nome
+      # trocado e tipo incompativel, que e exatamente o erro que so aparece na
+      # hora do apply. Nao diz nada sobre o manifesto estar certo para a carga
+      # real, e o README do diretorio deixa isso claro.
+      - name: Instalar kubeconform
+        run: |
+          curl -sSL -o kubeconform.tar.gz             https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform.tar.gz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+
+      # O kustomization.yaml fica de fora porque nao e recurso da API do
+      # Kubernetes: e configuracao da ferramenta, e o kubeconform corretamente
+      # nao tem esquema para ele. Validar a saida renderizada do kustomize
+      # exigiria instalar mais uma ferramenta para cobrir uma lista de arquivos
+      # que o proprio job ja percorre.
+      - name: Validar
+        run: |
+          kubeconform -strict -summary             -kubernetes-version 1.30.0             -schema-location default             -ignore-filename-pattern 'kustomization.yaml'             k8s/*.yaml
+
+  seguranca:
+    name: Seguranca
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Sem chave da NVD a consulta e limitada e cai com frequencia por tempo
+      # esgotado, o que quebraria o build por motivo que nao e nosso. Roda para
+      # o relatorio existir, sem travar a entrega. Cadastre NVD_API_KEY e
+      # troque para false quando quiser que vulnerabilidade alta pare o build.
+      - name: Dependencias
+        continue-on-error: true
+        run: >
+          mvn -B org.owasp:dependency-check-maven:check
+          -DfailBuildOnCVSS=7
+          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+
+  terraform:
+    name: Infraestrutura
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Formatacao
+        run: terraform fmt -check -recursive infra
+
+      # init sem backend e validate nao precisam de credencial da AWS: eles
+      # conferem sintaxe, referencia entre recursos e tipo de atributo. O que
+      # nao cobrem e se o recurso existe de fato na conta, e isso so o plan
+      # com credencial diria.
+      - name: Validar
+        working-directory: infra
+        run: |
+          terraform init -backend=false -input=false
+          terraform validate
+
+  cluster:
+    name: Kubernetes num cluster de verdade
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Um cluster kind de verdade, e nao so validacao de esquema. A diferenca
+      # importa: kubeconform diz que o YAML esta bem formado, e este job diz
+      # que o Kubernetes aceita o manifesto e agenda os pods. Sonda mal escrita
+      # e limite de recurso impossivel so aparecem aqui.
+      - uses: helm/kind-action@v1
+        with:
+          cluster_name: feira
+          wait: 120s
+
+      - name: Aplicar os manifestos
+        run: kubectl apply -k k8s/
+
+      - name: Esperar bancos e broker
+        run: |
+          kubectl -n feira rollout status statefulset/broker --timeout=300s
+          for banco in pedidos estoque pagamentos; do
+            kubectl -n feira rollout status statefulset/banco-$banco --timeout=300s
+          done
+
+      # Os Deployments dos servicos apontam para imagens em ghcr que este job
+      # nao publica, entao eles nao sobem aqui. O que se verifica e que o
+      # Kubernetes aceitou os objetos e agendou os pods: erro de sonda, de
+      # seletor ou de volume aparece neste ponto.
+      - name: Conferir que os objetos existem e foram agendados
+        run: |
+          kubectl -n feira get all
+          for s in pedidos estoque pagamentos; do
+            kubectl -n feira get deploy/servico-$s -o wide
+            kubectl -n feira get pdb/servico-$s
+          done
+
+      - name: Diagnostico quando algo falha
+        if: failure()
+        run: |
+          kubectl -n feira get events --sort-by=.lastTimestamp | tail -40
+          kubectl -n feira describe pods | tail -80

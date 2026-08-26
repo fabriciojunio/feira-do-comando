@@ -1,0 +1,517 @@
+/*
+ * Identidade do Feira.
+ *
+ * A referencia e feira de rua no comeco da manha: papel de embrulho, caixote
+ * de madeira, etiqueta de preco escrita a mao, verde de folha e laranja de
+ * abobora. Nada de fundo escuro com roxo, que e o visual padrao de todo painel
+ * de software e nao diz nada sobre o que este sistema faz.
+ *
+ * A regra de cor e simples: verde e o que deu certo, laranja e o que esta
+ * acontecendo agora, vermelho de tijolo e o que deu errado. O usuario aprende
+ * isso na primeira tela e nao precisa ler legenda.
+ */
+
+:root {
+  --papel: #faf7f2;
+  --papel-fundo: #f2ede4;
+  --caixote: #ffffff;
+  --linha: #e3dbcd;
+  --linha-forte: #cdc2ae;
+
+  --tinta: #23201c;
+  --tinta-media: #5f584e;
+  --tinta-fraca: #8a8279;
+
+  --folha: #2f6b4a;
+  --folha-clara: #e6f0e9;
+  --abobora: #d9622b;
+  --abobora-clara: #fbeade;
+  --milho: #e8a020;
+  --tijolo: #b03a2e;
+  --tijolo-clara: #fbe6e3;
+
+  --raio: 10px;
+  --raio-pequeno: 6px;
+  --largura: 1140px;
+
+  --tipo: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --tipo-mono: ui-monospace, "SF Mono", "Cascadia Mono", "Roboto Mono", monospace;
+
+  --sombra: 0 1px 2px rgba(35, 32, 28, 0.06), 0 4px 12px rgba(35, 32, 28, 0.04);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--papel-fundo);
+  color: var(--tinta);
+  font-family: var(--tipo);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+.envolucro {
+  max-width: var(--largura);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ---------- Cabecalho ---------- */
+
+.cabecalho {
+  background: var(--papel);
+  border-bottom: 2px solid var(--linha-forte);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.cabecalho .envolucro {
+  display: flex;
+  align-items: center;
+  gap: 26px;
+  height: 66px;
+}
+
+.marca {
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* As tres listras sao a barraca da feira vista de frente. */
+.toldo {
+  display: inline-flex;
+  width: 26px;
+  height: 16px;
+  border-radius: 3px 3px 0 0;
+  overflow: hidden;
+}
+
+.toldo span {
+  flex: 1;
+}
+
+.toldo span:nth-child(1) { background: var(--folha); }
+.toldo span:nth-child(2) { background: var(--papel); }
+.toldo span:nth-child(3) { background: var(--abobora); }
+
+.navegacao {
+  margin-left: auto;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  font-size: 15px;
+  color: var(--tinta-media);
+}
+
+.navegacao a:hover {
+  color: var(--tinta);
+}
+
+.navegacao a.ativo {
+  color: var(--folha);
+  font-weight: 600;
+}
+
+/* ---------- Botoes ---------- */
+
+.botao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: 1px solid transparent;
+  border-radius: var(--raio-pequeno);
+  background: var(--folha);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.botao:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.botao.secundario {
+  background: transparent;
+  border-color: var(--linha-forte);
+  color: var(--tinta);
+}
+
+.botao.secundario:hover:not(:disabled) {
+  background: var(--papel);
+}
+
+.botao.laranja {
+  background: var(--abobora);
+}
+
+.botao.pequeno {
+  padding: 6px 12px;
+  font-size: 13.5px;
+}
+
+.botao.largo {
+  width: 100%;
+}
+
+/* ---------- Blocos ---------- */
+
+.secao {
+  padding: 34px 0;
+}
+
+.titulo-secao {
+  font-size: 12.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--tinta-fraca);
+  margin: 0 0 18px;
+  font-weight: 700;
+}
+
+.caixote {
+  background: var(--caixote);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  padding: 20px;
+  box-shadow: var(--sombra);
+}
+
+.grade-produtos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 16px;
+}
+
+.produto {
+  background: var(--caixote);
+  border: 1px solid var(--linha);
+  border-radius: var(--raio);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--sombra);
+}
+
+.produto .sku {
+  font-family: var(--tipo-mono);
+  font-size: 11.5px;
+  color: var(--tinta-fraca);
+  letter-spacing: 0.04em;
+}
+
+.produto .nome {
+  font-weight: 600;
+  font-size: 15.5px;
+  line-height: 1.3;
+}
+
+/* Etiqueta de preco: o angulo leve imita a placa escrita a mao do caixote. */
+.preco {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--folha);
+  letter-spacing: -0.02em;
+  margin-top: 2px;
+}
+
+.produto .acoes {
+  margin-top: auto;
+  padding-top: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quantidade {
+  width: 62px;
+  padding: 7px 8px;
+  border: 1px solid var(--linha-forte);
+  border-radius: var(--raio-pequeno);
+  background: var(--papel);
+  text-align: center;
+}
+
+/* ---------- Selos ---------- */
+
+.selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid var(--linha-forte);
+  color: var(--tinta-media);
+  background: var(--papel);
+}
+
+.selo.ok {
+  border-color: var(--folha);
+  color: var(--folha);
+  background: var(--folha-clara);
+}
+
+.selo.andamento {
+  border-color: var(--abobora);
+  color: var(--abobora);
+  background: var(--abobora-clara);
+}
+
+.selo.ruim {
+  border-color: var(--tijolo);
+  color: var(--tijolo);
+  background: var(--tijolo-clara);
+}
+
+.selo.esgotado {
+  border-color: var(--linha-forte);
+  color: var(--tinta-fraca);
+}
+
+/* ---------- Trilho da saga ---------- */
+
+.trilho {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 6px 0;
+}
+
+.passo {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 14px;
+  align-items: start;
+  position: relative;
+  padding-bottom: 20px;
+}
+
+/* A linha que liga um passo ao proximo. O ultimo nao tem. */
+.passo:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 26px;
+  bottom: 0;
+  width: 2px;
+  background: var(--linha);
+}
+
+.passo.concluido:not(:last-child)::before {
+  background: var(--folha);
+}
+
+.marcador {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--linha-forte);
+  background: var(--caixote);
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tinta-fraca);
+  z-index: 1;
+}
+
+.passo.concluido .marcador {
+  border-color: var(--folha);
+  background: var(--folha);
+  color: #fff;
+}
+
+.passo.agora .marcador {
+  border-color: var(--abobora);
+  color: var(--abobora);
+  background: var(--abobora-clara);
+}
+
+.passo.falhou .marcador {
+  border-color: var(--tijolo);
+  background: var(--tijolo);
+  color: #fff;
+}
+
+.passo .titulo {
+  font-weight: 600;
+  padding-top: 4px;
+}
+
+.passo .detalhe {
+  color: var(--tinta-media);
+  font-size: 14px;
+}
+
+/* ---------- Tabela ---------- */
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+
+.tabela th {
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 2px solid var(--linha-forte);
+  color: var(--tinta-fraca);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.tabela td {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--linha);
+}
+
+.rolagem {
+  overflow-x: auto;
+}
+
+/* ---------- Avisos ---------- */
+
+.aviso {
+  padding: 13px 16px;
+  border-radius: var(--raio-pequeno);
+  border: 1px solid var(--linha-forte);
+  background: var(--papel);
+  font-size: 14.5px;
+  margin: 14px 0;
+}
+
+.aviso.erro {
+  border-color: var(--tijolo);
+  background: var(--tijolo-clara);
+  color: #7d2a20;
+}
+
+.aviso.ok {
+  border-color: var(--folha);
+  background: var(--folha-clara);
+  color: #1f4a33;
+}
+
+/* ---------- Utilidades ---------- */
+
+.linha-flex {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.espalha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mono {
+  font-family: var(--tipo-mono);
+  font-size: 13px;
+}
+
+.fraco {
+  color: var(--tinta-media);
+}
+
+.apagado {
+  color: var(--tinta-fraca);
+  font-size: 13px;
+}
+
+.numero-grande {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.abertura {
+  padding: 44px 0 30px;
+  background: var(--papel);
+  border-bottom: 1px solid var(--linha);
+}
+
+.abertura h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  margin: 0 0 10px;
+}
+
+.abertura p {
+  color: var(--tinta-media);
+  max-width: 62ch;
+  margin: 0;
+}
+
+.rodape {
+  padding: 26px 0 44px;
+  color: var(--tinta-fraca);
+  font-size: 13px;
+  border-top: 1px solid var(--linha);
+  margin-top: 20px;
+}
+
+.carregando {
+  padding: 36px 0;
+  color: var(--tinta-fraca);
+}
+
+@media (max-width: 640px) {
+  .cabecalho .envolucro {
+    height: auto;
+    padding-top: 12px;
+    padding-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .navegacao {
+    margin-left: 0;
+    width: 100%;
+    gap: 16px;
+  }
+
+  .grade-produtos {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
