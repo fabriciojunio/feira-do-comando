@@ -156,6 +156,17 @@ docker compose up -d --wait
 k6 run carga/pedidos.js
 ```
 
+Na primeira execução no CI:
+
+```
+[carga] 24483 pedidos criados
+[carga] p95 da requisicao: 51 ms
+[carga] taxa de falha: 0.00%
+```
+
+Compare com os 108 pedidos por segundo do teste em processo. Os dois números medem coisas
+diferentes, e o de cima é o que inclui rede, serialização e gateway.
+
 Roda no CI a cada push na branch principal, e não a cada pull request, porque levanta o sistema
 inteiro e levaria minutos que o retorno rápido não pode pagar.
 
