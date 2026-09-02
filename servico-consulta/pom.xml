@@ -81,6 +81,18 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+        <!--
+          Sem esta execucao o jar sai sem manifesto executavel, porque este
+          projeto usa o Boot como BOM e nao como parent, e o goal repackage
+          so e ligado sozinho pelo parent. O sintoma e o container subindo e
+          morrendo com "no main manifest attribute", e ele nao aparecia no CI
+          porque nada levantava o compose ate agora.
+        -->
+        <executions>
+          <execution>
+            <goals><goal>repackage</goal></goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
