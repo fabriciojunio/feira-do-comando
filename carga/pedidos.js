@@ -55,22 +55,37 @@ const SKU = 'CARGA-K6';
 // e nao um erro, mas misturar os dois faria a taxa de falha medir a coisa
 // errada.
 export function setup() {
-  const resposta = http.post(`${ESTOQUE}/api/v1/produtos`, JSON.stringify({
+  const resposta = http.post(`${ESTOQUE}/api/v1/estoque/itens`, JSON.stringify({
     sku: SKU,
     descricao: 'Produto do teste de carga',
     quantidade: 1000000,
   }), { headers: { 'Content-Type': 'application/json' } });
 
-  // Ja existir e esperado quando o teste roda duas vezes no mesmo ambiente.
-  check(resposta, {
-    'estoque preparado': (r) => r.status === 201 || r.status === 409,
+  // 200 quando o SKU ja existe: repor soma ao saldo em vez de sobrescrever, e
+  // o teste rodando duas vezes no mesmo ambiente cai nesse caminho.
+  const preparado = check(resposta, {
+    'estoque preparado': (r) => r.status === 201 || r.status === 200,
   });
+
+  // Sem estoque, todo pedido e recusado e a medicao vira 100% de falha sem
+  // dizer por que. Melhor parar aqui, com a resposta na tela.
+  if (!preparado) {
+    throw new Error(`nao consegui preparar o estoque: ${resposta.status} ${resposta.body}`);
+  }
 }
 
 export default function () {
   group('criacao de pedido', () => {
     const corpo = JSON.stringify({
-      itens: [{ sku: SKU, quantidade: 1, precoUnitario: 29.9 }],
+      // precoUnitario vai como texto de proposito: o dominio converte para o
+      // tipo de dinheiro dele, e numero de ponto flutuante em JSON perde
+      // centavo antes mesmo de chegar la.
+      itens: [{
+        sku: SKU,
+        descricao: 'Produto do teste de carga',
+        quantidade: 1,
+        precoUnitario: '29.90',
+      }],
     });
 
     const resposta = http.post(`${BASE}/api/v1/pedidos`, corpo, {

@@ -60,20 +60,21 @@ docker compose up -d
 ```
 
 ```bash
-# cadastra um produto no estoque
-curl -X POST http://localhost:8081/api/v1/produtos \
+# cadastra um item no estoque, na porta 8082
+curl -X POST http://localhost:8082/api/v1/estoque/itens \
   -H "Content-Type: application/json" \
   -d '{"sku":"CAFE-500","descricao":"Café 500g","quantidade":10}'
 
-# faz um pedido
-curl -X POST http://localhost:8080/api/v1/pedidos \
+# faz um pedido, na porta 8081. O preço vai como texto: número de ponto
+# flutuante em JSON perde centavo antes de chegar no domínio.
+curl -X POST http://localhost:8081/api/v1/pedidos \
   -H "Content-Type: application/json" \
   -H "X-Cliente-Id: 11111111-1111-1111-1111-111111111111" \
   -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"itens":[{"sku":"CAFE-500","quantidade":2,"precoUnitario":29.90}]}'
+  -d '{"itens":[{"sku":"CAFE-500","descricao":"Café 500g","quantidade":2,"precoUnitario":"29.90"}]}'
 
-# acompanha a saga andando
-curl http://localhost:8083/api/v1/consulta/pedidos/<id>
+# acompanha a saga andando, na porta 8084
+curl http://localhost:8084/api/v1/consulta/pedidos/<id>
 ```
 
 ## Testes
