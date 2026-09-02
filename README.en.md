@@ -9,6 +9,16 @@ twice, out of order, and too late.
 The interesting part is not the happy path. It is what the code does when the
 broker misbehaves, and that is what the tests are about.
 
+**Live demo:** [feira-do-comando.vercel.app](https://feira-do-comando.vercel.app)
+
+The saga runs inside the browser there, with the same transitions as the aggregate: stock
+reservation, charge, and the compensation when the card is declined. There is no back end behind
+that page, because four Java services, a Kafka and three databases do not fit in a free tier, and
+a shop window that loads and breaks on the first click is worse than no shop window. A banner at
+the top says so. The real system comes up with `docker compose up -d`.
+
+To see the compensation, order the soya oil: that SKU is always declined by the acquirer.
+
 ## What it does
 
 A customer places an order. Stock reserves the units. Payment charges the card.
