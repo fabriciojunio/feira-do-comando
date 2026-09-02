@@ -74,6 +74,32 @@ select {
   padding: 0 20px;
 }
 
+/* ---------- Faixa da demonstracao ---------- */
+
+/* Milho, que e o tom de aviso da paleta. Nao usa vermelho: nao ha nada errado
+   acontecendo, e vermelho faria parecer que sim. */
+.faixa-demonstracao {
+  background: var(--milho);
+  color: #33270c;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 9px 0;
+  border-bottom: 2px solid var(--linha-forte);
+}
+
+.faixa-demonstracao code {
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: var(--raio-pequeno);
+  padding: 1px 5px;
+  font-size: 12px;
+}
+
+.faixa-demonstracao a {
+  color: #33270c;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ---------- Cabecalho ---------- */
 
 .cabecalho {
