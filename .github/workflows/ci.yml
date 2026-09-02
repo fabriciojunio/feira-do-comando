@@ -200,15 +200,17 @@ jobs:
       - name: Subir o sistema
         run: docker compose up -d --wait --wait-timeout 300
 
+      # Binario direto, e nao o repositorio apt. O caminho pelo apt exige
+      # importar a chave com gpg --recv-keys, e o runner nao tem dirmngr:
+      # falha com "No dirmngr" antes de instalar qualquer coisa.
       - name: Instalar k6
+        env:
+          K6_VERSAO: v2.2.0
         run: |
-          sudo gpg --no-default-keyring \
-            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-            --keyserver hkp://keyserver.ubuntu.com:80 \
-            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-            | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update && sudo apt-get install -y k6
+          curl -sSL "https://github.com/grafana/k6/releases/download/${K6_VERSAO}/k6-${K6_VERSAO}-linux-amd64.tar.gz" -o /tmp/k6.tar.gz
+          tar xzf /tmp/k6.tar.gz -C /tmp --strip-components 1 "k6-${K6_VERSAO}-linux-amd64/k6"
+          sudo mv /tmp/k6 /usr/local/bin/k6
+          k6 version
 
       - name: Rodar a carga
         run: k6 run -e BASE=http://localhost:8081 -e ESTOQUE=http://localhost:8082 carga/pedidos.js
