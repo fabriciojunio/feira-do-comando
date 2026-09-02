@@ -1,4 +1,5 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
+import { MODO_DEMONSTRACAO } from '@/servicos/api';
 import { Vitrine } from '@/paginas/Vitrine';
 import { MeusPedidos } from '@/paginas/MeusPedidos';
 import { DetalheDoPedido } from '@/paginas/DetalheDoPedido';
@@ -7,6 +8,8 @@ import { Operacao } from '@/paginas/Operacao';
 export function App() {
   return (
     <>
+      {MODO_DEMONSTRACAO && <FaixaDaDemonstracao />}
+
       <header className="cabecalho">
         <div className="envolucro">
           <NavLink to="/" className="marca">
@@ -51,6 +54,35 @@ export function App() {
         </div>
       </footer>
     </>
+  );
+}
+
+/**
+ * Diz que isto e uma demonstracao, e diz onde esta o sistema.
+ *
+ * Fica no topo e nao no rodape de proposito: quem abre a pagina precisa saber
+ * antes de clicar, e nao depois de rolar ate o fim. Demonstracao que nao se
+ * anuncia vira promessa que o sistema nao cumpre.
+ */
+function FaixaDaDemonstracao() {
+  return (
+    <div className="faixa-demonstracao">
+      <div className="envolucro">
+        <strong>Modo demonstracao.</strong> A saga roda aqui no navegador, com as mesmas
+        transicoes do sistema: reserva de estoque, cobranca, e a compensacao quando o cartao
+        recusa. Nao ha back-end atras desta pagina, porque quatro servicos Java, um Kafka e tres
+        bancos nao cabem em camada gratuita. O sistema de verdade sobe com{' '}
+        <code>docker compose up -d</code>.{' '}
+        <a
+          href="https://github.com/fabriciojunio/feira-do-comando"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Codigo no GitHub
+        </a>
+        .
+      </div>
+    </div>
   );
 }
 

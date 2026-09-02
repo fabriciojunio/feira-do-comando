@@ -6,28 +6,29 @@
  * falam de tela.
  */
 
+import { estoqueSimulado, pedidosSimulados, cobrancasSimuladas } from './demonstracao';
+import { FalhaDaApi } from './falha';
+
+// Reexportado para as telas continuarem importando tudo de um lugar so.
+export { FalhaDaApi };
+
 const BASE = import.meta.env.VITE_API_BASE ?? '';
+
+/**
+ * Liga a saga simulada no navegador, para a demonstracao publicada.
+ *
+ * O sistema de verdade sao quatro servicos Java, um Kafka e tres bancos, e isso
+ * nao cabe em camada gratuita. Sem este modo, a tela publicada carregaria e
+ * quebraria no primeiro clique, o que e pior que nao ter demonstracao.
+ *
+ * Mesma ideia dos adaptadores do back-end: a tela nao sabe qual dos dois esta
+ * atendendo, e o contrato e o mesmo.
+ */
+export const MODO_DEMONSTRACAO = import.meta.env.VITE_DEMONSTRACAO === 'true';
 
 /** Em um sistema real vem do token. Aqui e fixo, e isso esta dito no README. */
 export const CLIENTE = 'cliente-demo';
 
-/**
- * Erro no formato RFC 9457.
- *
- * O campo `codigo` e uma extensao nossa e existe justamente para a interface
- * poder ramificar sem depender do texto, que muda.
- */
-export class FalhaDaApi extends Error {
-  constructor(
-    readonly codigo: string,
-    mensagem: string,
-    readonly status: number,
-    readonly detalhes: Record<string, unknown> = {},
-  ) {
-    super(mensagem);
-    this.name = 'FalhaDaApi';
-  }
-}
 
 type Opcoes = {
   metodo?: 'GET' | 'POST' | 'DELETE';
@@ -80,7 +81,7 @@ export type Saldo = {
   emMaos: number;
 };
 
-export const estoque = {
+const estoqueHttp = {
   itens: () => chamar<Saldo[]>('/api/v1/estoque/itens'),
   reposicao: (limite = 5) => chamar<Saldo[]>(`/api/v1/estoque/reposicao?limite=${limite}`),
   resumo: () => chamar<Record<string, number>>('/api/v1/estoque/reservas'),
@@ -130,7 +131,7 @@ export type LinhaDoCarrinho = {
   precoUnitario: string;
 };
 
-export const pedidos = {
+const pedidosHttp = {
   criar: (itens: LinhaDoCarrinho[], chaveDeIdempotencia: string) =>
     chamar<Pedido>('/api/v1/pedidos', {
       metodo: 'POST',
@@ -160,10 +161,16 @@ export type Cobranca = {
   encerradaEm: string | null;
 };
 
-export const cobrancas = {
+const cobrancasHttp = {
   consultar: (pedidoId: string) => chamar<Cobranca>(`/api/v1/cobrancas/${pedidoId}`),
   resumo: () => chamar<Record<string, number>>('/api/v1/cobrancas/resumo'),
 };
+
+// A escolha acontece uma vez, aqui. As telas importam estoque, pedidos e
+// cobrancas sem saber de onde vem a resposta.
+export const estoque = MODO_DEMONSTRACAO ? estoqueSimulado : estoqueHttp;
+export const pedidos = MODO_DEMONSTRACAO ? pedidosSimulados : pedidosHttp;
+export const cobrancas = MODO_DEMONSTRACAO ? cobrancasSimuladas : cobrancasHttp;
 
 // ---------- Utilidades ----------
 
