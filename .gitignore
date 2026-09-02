@@ -17,3 +17,4 @@ infra/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars
+.vercel

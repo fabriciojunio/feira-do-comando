@@ -9,6 +9,16 @@ ordem e atrasada.
 A parte interessante não é o caminho feliz. É o que o código faz quando o corretor se comporta
 mal, e é sobre isso que os testes são.
 
+**Demonstração no ar:** [feira-do-comando.vercel.app](https://feira-do-comando.vercel.app)
+
+A saga roda ali dentro do navegador, com as mesmas transições do agregado: reserva de estoque,
+cobrança, e a compensação quando o cartão recusa. Não há back-end atrás daquela página, porque
+quatro serviços Java, um Kafka e três bancos não cabem em camada gratuita, e uma vitrine que
+carrega e quebra no primeiro clique é pior que vitrine nenhuma. A faixa no topo diz isso a quem
+chega. O sistema de verdade sobe com `docker compose up -d`.
+
+Para ver a compensação, peça o óleo de soja: aquele SKU é sempre recusado pelo adquirente.
+
 ## O que ele faz
 
 Um cliente faz um pedido. O estoque reserva as unidades. Pagamentos cobra o cartão. Se o cartão é
