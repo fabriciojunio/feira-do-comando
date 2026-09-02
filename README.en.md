@@ -144,6 +144,44 @@ violation had already doomed, so the read was useless and the commit failed
 anyway. The transactional boundary now ends before the recovery, in
 `GravadorDePedido`, and every caller gets the winning order back.
 
+## Observability
+
+Metrics answer "it is slow". Traces answer "it is slow *where*", which on an order crossing four
+services is the first question in any incident.
+
+The work was not enabling tracing, which is one dependency and three lines. It was the outbox:
+the message is written inside the transaction that changes the order and published later, on
+another thread, once that request is gone. Trace context lives on the thread, so it died at
+commit and the dashboard showed disconnected traces instead of one whole saga.
+
+The W3C `traceparent` is now stored in an outbox column and propagated in a record header.
+Consumption resumes it in a container-factory interceptor rather than in each `@KafkaListener`,
+so the fifth consumer someone writes is traced by default. Every database query becomes a span
+too, which is where an N+1 becomes visible.
+
+It ships disabled: an exporter with no collector fills the log with connection errors. Turn it on
+with `RASTRO_ATIVO=true` and a collector address. See
+[006](docs/adr/006-rastro-distribuido.md).
+
+## Load testing
+
+The throughput test in the build measures the cost of the code: in-process, through MockMvc,
+against an embedded PostgreSQL.
+
+`carga/pedidos.js` measures the cost of the system, with k6 against `docker compose`: real
+network, HTTP serialisation, the edge gateway and the connection pool under pressure.
+
+```bash
+docker compose up -d --wait
+k6 run carga/pedidos.js
+```
+
+It runs in CI on every push to the main branch, not on every pull request, because it brings the
+whole system up and would cost minutes that fast feedback cannot pay.
+
+It is still not a test against a production-shaped environment: one machine, empty databases. It
+is a floor and a trend, not a capacity number.
+
 ## Design decisions
 
 Each of these has a short document explaining the trade-off, including what was
@@ -154,6 +192,7 @@ given up:
 - [003 — optimistic locking on stock](docs/adr/003-trava-otimista-no-estoque.md)
 - [004 — one database per service](docs/adr/004-um-banco-por-servico.md)
 - [005 — embedded PostgreSQL and Kafka in tests](docs/adr/005-infra-embutida-nos-testes.md)
+- [006 — distributed tracing that survives the outbox](docs/adr/006-rastro-distribuido.md)
 
 ## The read model
 
@@ -215,9 +254,9 @@ says so.
 
 ## Stack
 
-Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL, Flyway, Kafka, Redpanda,
-Micrometer and Prometheus, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit,
-Docker.
+Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL, MongoDB, Flyway, Kafka, Redpanda,
+Micrometer with Prometheus and OpenTelemetry, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit,
+k6, Docker, Kubernetes, Terraform.
 
 Errors follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html)
 (Problem Details), with a stable `codigo` extension so clients can branch

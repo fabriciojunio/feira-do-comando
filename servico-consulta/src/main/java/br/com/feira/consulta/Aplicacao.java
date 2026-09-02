@@ -41,7 +41,11 @@ import org.springframework.context.annotation.ComponentScan;
         SqlInitializationAutoConfiguration.class})
 @ComponentScan(basePackages = {
         "br.com.feira.consulta",
-        "br.com.feira.plataforma.mensageria"})
+        "br.com.feira.plataforma.mensageria",
+        // Só a observabilidade da plataforma, e não ela inteira: este serviço
+        // não tem banco relacional, então outbox e inbox não fazem sentido
+        // aqui e arrastariam JPA junto.
+        "br.com.feira.plataforma.observabilidade"})
 public class Aplicacao {
 
     public static void main(String[] args) {

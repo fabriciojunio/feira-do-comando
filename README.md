@@ -123,6 +123,44 @@ a violação de restrição já tinha condenado, então a leitura não valia nad
 mesmo jeito. A fronteira transacional agora termina antes da recuperação, em `GravadorDePedido`,
 e todo mundo recebe o pedido vencedor de volta.
 
+## Observabilidade
+
+Métrica responde "está lento". Rastro responde "está lento onde", que num pedido atravessando
+quatro serviços é a primeira pergunta de qualquer plantão.
+
+O trabalho não foi ligar o rastreamento, que é uma dependência e três linhas. Foi o outbox: a
+mensagem é gravada na transação que muda o pedido e publicada depois, por outra thread, quando
+aquela requisição já acabou. Contexto de rastro vive na thread, então morria no commit e o painel
+mostrava rastros desligados em vez de uma saga inteira.
+
+O `traceparent` do W3C passou a ser gravado numa coluna do outbox e propagado em cabeçalho do
+registro. O consumo é retomado num interceptador da fábrica, e não em cada `@KafkaListener`, então
+o quinto consumidor que alguém escrever já nasce rastreado. Cada consulta ao banco também vira um
+trecho, que é onde o problema de uma consulta virar N fica visível.
+
+Vem desligado: exportador sem coletor enche o log de erro de conexão. Ligar é
+`RASTRO_ATIVO=true` e apontar o endereço. Está no
+[006](docs/adr/006-rastro-distribuido.md).
+
+## Teste de carga
+
+O teste de vazão do build mede o custo do código: roda em processo, por MockMvc, contra um
+PostgreSQL embarcado.
+
+`carga/pedidos.js` mede o custo do sistema, com k6 contra o `docker-compose`: rede de verdade,
+serialização HTTP, o gateway na borda e o pool de conexões sob pressão.
+
+```bash
+docker compose up -d --wait
+k6 run carga/pedidos.js
+```
+
+Roda no CI a cada push na branch principal, e não a cada pull request, porque levanta o sistema
+inteiro e levaria minutos que o retorno rápido não pode pagar.
+
+Continua não sendo um teste contra ambiente com forma de produção: é uma máquina só, com bancos
+vazios. Serve como piso e como tendência, não como número de capacidade.
+
 ## Decisões de arquitetura
 
 Cada uma tem um documento curto explicando o custo, inclusive o que se abriu mão:
@@ -132,6 +170,7 @@ Cada uma tem um documento curto explicando o custo, inclusive o que se abriu mã
 - [003, trava otimista no estoque](docs/adr/003-trava-otimista-no-estoque.md)
 - [004, um banco por serviço](docs/adr/004-um-banco-por-servico.md)
 - [005, PostgreSQL e Kafka embarcados nos testes](docs/adr/005-infra-embutida-nos-testes.md)
+- [006, rastro distribuído que atravessa o outbox](docs/adr/006-rastro-distribuido.md)
 
 ## O modelo de leitura
 
@@ -186,8 +225,8 @@ Eles ainda assim nunca rodaram num cluster de produção, e o README do diretór
 ## Stack
 
 Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL, MongoDB, Flyway, Kafka, Redpanda,
-Micrometer e Prometheus, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit, Docker, Kubernetes,
-Terraform.
+Micrometer com Prometheus e OpenTelemetry, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit, k6,
+Docker, Kubernetes, Terraform.
 
 Os erros seguem a [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html), com uma extensão
 `codigo` estável para o cliente poder decidir sem interpretar texto corrido.

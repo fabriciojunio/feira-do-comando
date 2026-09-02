@@ -5,6 +5,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Limit;
 import org.springframework.kafka.core.KafkaTemplate;
+import br.com.feira.plataforma.observabilidade.RastroDaMensagem;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import java.nio.charset.StandardCharsets;
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -43,13 +48,18 @@ public class PublicadorDoOutbox {
     private final KafkaTemplate<String, String> kafka;
     private final MeterRegistry metricas;
     private final Clock relogio;
+    private final RastroDaMensagem rastro;
+    private final Tracer tracer;
 
     public PublicadorDoOutbox(OutboxRepository repositorio, KafkaTemplate<String, String> kafka,
-                              MeterRegistry metricas, Clock relogio) {
+                              MeterRegistry metricas, Clock relogio,
+                              RastroDaMensagem rastro, Tracer tracer) {
         this.repositorio = repositorio;
         this.kafka = kafka;
         this.metricas = metricas;
         this.relogio = relogio;
+        this.rastro = rastro;
+        this.tracer = tracer;
     }
 
     @Scheduled(fixedDelayString = "${feira.outbox.intervalo-ms:500}")
@@ -60,19 +70,33 @@ public class PublicadorDoOutbox {
                 MensagemDoOutbox.TENTATIVAS_MAXIMAS, Limit.of(TAMANHO_DO_LOTE));
 
         for (MensagemDoOutbox mensagem : pendentes) {
-            try {
-                kafka.send(mensagem.topico(), mensagem.chave(), mensagem.carga())
-                        .get(ESPERA_DO_ENVIO.toMillis(), TimeUnit.MILLISECONDS);
+            // O trecho e aberto com o contexto gravado junto com a mensagem, e
+            // nao com o da thread do agendador, que nao tem relacao nenhuma
+            // com quem originou o evento.
+            Span trecho = rastro.retomar(mensagem.tracePai(), "outbox publicar");
+            trecho.tag("mensageria.topico", mensagem.topico());
+            trecho.tag("mensageria.tipo", mensagem.tipo());
+
+            try (var escopo = tracer.withSpan(trecho)) {
+                var registro = new ProducerRecord<>(mensagem.topico(), mensagem.chave(), mensagem.carga());
+                String traceparent = rastro.capturar();
+                if (traceparent != null) {
+                    registro.headers().add(RastroDaMensagem.CAMPO,
+                            traceparent.getBytes(StandardCharsets.UTF_8));
+                }
+                kafka.send(registro).get(ESPERA_DO_ENVIO.toMillis(), TimeUnit.MILLISECONDS);
 
                 mensagem.marcarPublicada(relogio.instant());
                 metricas.counter("feira.outbox.publicadas", "topico", mensagem.topico()).increment();
 
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                trecho.error(e);
                 mensagem.marcarFalha("envio interrompido", relogio.instant());
                 return;
 
             } catch (Exception e) {
+                trecho.error(e);
                 mensagem.marcarFalha(e.getMessage(), relogio.instant());
                 metricas.counter("feira.outbox.falhas", "topico", mensagem.topico()).increment();
 
@@ -84,6 +108,12 @@ public class PublicadorDoOutbox {
                     log.warn("Falha ao publicar {} ({}a tentativa): {}",
                             mensagem.id(), mensagem.tentativas(), e.getMessage());
                 }
+
+            } finally {
+                // Trecho nao fechado nunca chega ao painel, e o rastro fica
+                // eternamente em andamento. Vale para o caminho feliz e para
+                // os dois de erro.
+                trecho.end();
             }
         }
     }

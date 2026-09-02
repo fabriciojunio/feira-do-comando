@@ -185,3 +185,41 @@ jobs:
         run: |
           kubectl -n feira get events --sort-by=.lastTimestamp | tail -40
           kubectl -n feira describe pods | tail -80
+
+  carga:
+    name: Carga
+    runs-on: ubuntu-latest
+    needs: build
+    # So no push para a branch principal. Levanta o sistema inteiro e leva uns
+    # minutos; rodar em cada pull request atrasaria o retorno sem pegar nada
+    # que os testes de vazao do build ja nao peguem.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Subir o sistema
+        run: docker compose up -d --wait --wait-timeout 300
+
+      - name: Instalar k6
+        run: |
+          sudo gpg --no-default-keyring \
+            --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
+            | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Rodar a carga
+        run: k6 run -e BASE=http://localhost:8081 -e ESTOQUE=http://localhost:8082 carga/pedidos.js
+
+      - name: Guardar o resultado
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultado-da-carga
+          path: carga/resultado.json
+
+      - name: Log dos servicos quando falha
+        if: failure()
+        run: docker compose logs --tail 200

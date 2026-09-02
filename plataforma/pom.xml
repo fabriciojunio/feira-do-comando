@@ -35,6 +35,35 @@
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
+
+    <!--
+      Rastro distribuído. A métrica diz que o pedido ficou lento; o rastro diz
+      em qual dos quatro serviços. Num sistema orientado a eventos essa é a
+      primeira pergunta de qualquer plantão.
+    -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-tracing-bridge-otel</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+    </dependency>
+    <!--
+      Um trecho por consulta ao banco. Sem isto o rastro diz que o consumo
+      levou 800 ms, e não qual consulta dentro dele, que é onde mora o
+      problema de uma consulta virar N.
+    -->
+    <dependency>
+      <groupId>net.ttddyy</groupId>
+      <artifactId>datasource-proxy</artifactId>
+      <version>1.11.0</version>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-tracing-test</artifactId>
+      <scope>test</scope>
+    </dependency>
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jsr310</artifactId>

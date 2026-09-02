@@ -2,6 +2,7 @@ package br.com.feira.plataforma.outbox;
 
 import br.com.feira.contratos.Evento;
 import br.com.feira.plataforma.mensageria.MapeadorDeEventos;
+import br.com.feira.plataforma.observabilidade.RastroDaMensagem;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -20,11 +21,14 @@ public class Outbox implements RegistroDeSaida {
     private final OutboxRepository repositorio;
     private final MapeadorDeEventos mapeador;
     private final Clock relogio;
+    private final RastroDaMensagem rastro;
 
-    public Outbox(OutboxRepository repositorio, MapeadorDeEventos mapeador, Clock relogio) {
+    public Outbox(OutboxRepository repositorio, MapeadorDeEventos mapeador, Clock relogio,
+                  RastroDaMensagem rastro) {
         this.repositorio = repositorio;
         this.mapeador = mapeador;
         this.relogio = relogio;
+        this.rastro = rastro;
     }
 
     @Override
@@ -46,6 +50,10 @@ public class Outbox implements RegistroDeSaida {
                 evento.correlacao().toString(),
                 evento.nome(),
                 mapeador.paraJson(evento),
-                relogio.instant());
+                relogio.instant(),
+                // Capturado aqui, e nao na publicacao: aqui ainda existe o
+                // contexto da requisicao que originou o evento. Na publicacao
+                // ela ja terminou.
+                rastro.capturar());
     }
 }

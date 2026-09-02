@@ -68,6 +68,15 @@ public class MensagemDoOutbox {
     @Column(name = "ultimo_erro", length = 500)
     private String ultimoErro;
 
+    /**
+     * Contexto de rastro de quem gerou o evento, no formato do W3C.
+     *
+     * Nulo quando o evento nao nasceu de uma requisicao, o que e o caso das
+     * tarefas agendadas. Ver RastroDaMensagem.
+     */
+    @Column(name = "trace_pai", length = 80)
+    private String tracePai;
+
     /** Quando a proxima tentativa pode acontecer. Base do recuo exponencial. */
     @Column(name = "tentar_apos", nullable = false)
     private Instant tentarApos;
@@ -77,7 +86,7 @@ public class MensagemDoOutbox {
     }
 
     private MensagemDoOutbox(UUID id, String topico, String chave, String tipo, String carga,
-                             Instant agora) {
+                             Instant agora, String tracePai) {
         this.id = id;
         this.topico = topico;
         this.chave = chave;
@@ -86,11 +95,21 @@ public class MensagemDoOutbox {
         this.criadaEm = agora;
         this.tentarApos = agora;
         this.tentativas = 0;
+        this.tracePai = tracePai;
+    }
+
+    public String tracePai() {
+        return tracePai;
     }
 
     public static MensagemDoOutbox nova(UUID eventoId, String topico, String chave, String tipo,
                                         String carga, Instant agora) {
-        return new MensagemDoOutbox(eventoId, topico, chave, tipo, carga, agora);
+        return nova(eventoId, topico, chave, tipo, carga, agora, null);
+    }
+
+    public static MensagemDoOutbox nova(UUID eventoId, String topico, String chave, String tipo,
+                                        String carga, Instant agora, String tracePai) {
+        return new MensagemDoOutbox(eventoId, topico, chave, tipo, carga, agora, tracePai);
     }
 
     public void marcarPublicada(Instant agora) {

@@ -24,6 +24,15 @@ server:
   port: ${PORT:8084}
 
 management:
+  tracing:
+    # Desligado por padrao porque exportador sem coletor enche o log de erro
+    # de conexao. Ligar exige apontar o endereco, o que evita ligar sem querer.
+    enabled: ${RASTRO_ATIVO:false}
+    sampling:
+      probability: ${RASTRO_AMOSTRAGEM:1.0}
+  otlp:
+    tracing:
+      endpoint: ${RASTRO_ENDERECO:http://localhost:4318/v1/traces}
   endpoints:
     web:
       exposure:

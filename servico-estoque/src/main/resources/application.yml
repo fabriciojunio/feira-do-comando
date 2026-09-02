@@ -76,8 +76,14 @@ management:
     tags:
       servico: estoque
   tracing:
+    # Desligado por padrao: exportador sem coletor enche o log de erro de
+    # conexao. Ligar exige apontar o endereco, o que evita ligar sem querer.
+    enabled: ${RASTRO_ATIVO:false}
     sampling:
       probability: ${TRACE_SAMPLING:0.1}
+  otlp:
+    tracing:
+      endpoint: ${RASTRO_ENDERECO:http://localhost:4318/v1/traces}
 
 springdoc:
   swagger-ui:

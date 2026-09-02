@@ -4,7 +4,14 @@ import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import br.com.feira.plataforma.observabilidade.RastroDaMensagem;
+import io.micrometer.tracing.Span;
+import java.nio.charset.StandardCharsets;
+import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.common.header.Header;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.listener.RecordInterceptor;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -68,14 +75,73 @@ public class ConfiguracaoDoKafka {
     public ConcurrentKafkaListenerContainerFactory<String, String> fabricaDeConsumidores(
             ConsumerFactory<String, String> fabricaDeConsumo,
             KafkaTemplate<String, String> kafka,
+            RastroDaMensagem rastro,
             @Value("${feira.kafka.concorrencia:3}") int concorrencia) {
 
         var fabrica = new ConcurrentKafkaListenerContainerFactory<String, String>();
         fabrica.setConsumerFactory(fabricaDeConsumo);
         fabrica.setConcurrency(concorrencia);
         fabrica.setCommonErrorHandler(tratadorDeErro(kafka));
+        fabrica.setRecordInterceptor(retomaORastro(rastro));
         return fabrica;
     }
+
+    /**
+     * Poe o consumo dentro do rastro que veio no cabecalho da mensagem.
+     *
+     * Fica na fabrica, e nao em cada @KafkaListener, por dois motivos: sao
+     * quatro consumidores hoje e o quinto que alguem escrever amanha ja nasce
+     * rastreado; e nenhum deles precisa saber que observabilidade existe.
+     *
+     * O interceptador so abre o escopo. Quem fecha e o proprio Spring Kafka,
+     * ao terminar o registro, porque o escopo e amarrado ao ciclo de vida do
+     * consumo e nao ao metodo do listener.
+     */
+    private RecordInterceptor<String, String> retomaORastro(RastroDaMensagem rastro) {
+        return new RecordInterceptor<>() {
+            @Override
+            public ConsumerRecord<String, String> intercept(ConsumerRecord<String, String> registro,
+                                                            Consumer<String, String> consumidor) {
+                Header cabecalho = registro.headers().lastHeader(RastroDaMensagem.CAMPO);
+                String traceparent = cabecalho == null
+                        ? null
+                        : new String(cabecalho.value(), StandardCharsets.UTF_8);
+
+                Span trecho = rastro.retomar(traceparent, "mensageria consumir");
+                trecho.tag("mensageria.topico", registro.topic());
+                emAndamento.set(trecho);
+                return registro;
+            }
+
+            @Override
+            public void afterRecord(ConsumerRecord<String, String> registro,
+                                    Consumer<String, String> consumidor) {
+                Span trecho = emAndamento.get();
+                if (trecho != null) {
+                    trecho.end();
+                    emAndamento.remove();
+                }
+            }
+
+            @Override
+            public void failure(ConsumerRecord<String, String> registro, Exception excecao,
+                                Consumer<String, String> consumidor) {
+                Span trecho = emAndamento.get();
+                if (trecho != null) {
+                    trecho.error(excecao);
+                }
+            }
+        };
+    }
+
+    /**
+     * O trecho aberto no registro atual desta thread.
+     *
+     * O interceptador abre num metodo e fecha em outro, e o container usa uma
+     * thread por particao. Guardar em campo faria duas particoes fecharem o
+     * trecho uma da outra.
+     */
+    private static final ThreadLocal<Span> emAndamento = new ThreadLocal<>();
 
     private DefaultErrorHandler tratadorDeErro(KafkaTemplate<String, String> kafka) {
         var recuperador = new DeadLetterPublishingRecoverer(kafka,
