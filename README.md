@@ -1,21 +1,23 @@
-# Feira
+# Feira do Comando
 
-Event-driven order platform in Java 21 and Spring Boot 3.5: three services, a
-Kafka topic between them, and a saga that has to survive messages arriving
-twice, out of order, and too late.
+*[Read this in English](README.en.md)*
 
-The interesting part is not the happy path. It is what the code does when the
-broker misbehaves, and that is what the tests are about.
+Plataforma de pedidos orientada a eventos em Java 21 e Spring Boot 3.5: quatro serviços, tópicos
+do Kafka entre eles, e uma saga que precisa sobreviver a mensagem chegando duas vezes, fora de
+ordem e atrasada.
 
-## What it does
+A parte interessante não é o caminho feliz. É o que o código faz quando o corretor se comporta
+mal, e é sobre isso que os testes são.
 
-A customer places an order. Stock reserves the units. Payment charges the card.
-If the card is declined, the reservation goes back. If the card is approved
-while the order is already being cancelled, the money is refunded.
+## O que ele faz
+
+Um cliente faz um pedido. O estoque reserva as unidades. Pagamentos cobra o cartão. Se o cartão é
+recusado, a reserva volta. Se o cartão é aprovado enquanto o pedido já está sendo cancelado, o
+dinheiro é estornado.
 
 ```
                  ┌──────────────┐
-   POST /pedidos │   pedidos    │  saga orchestrator, outbox, order state
+   POST /pedidos │   pedidos    │  orquestra a saga, outbox, estado do pedido
                  └──────┬───────┘
                         │ feira.pedidos
              ┌──────────┴──────────┐
@@ -29,206 +31,175 @@ while the order is already being cancelled, the money is refunded.
                     pedidos
 ```
 
-Each service owns its own PostgreSQL database. They never share a table, which
-is the whole point: if they did, the outbox would be pointless because you
-could just write to your neighbour's table inside the same transaction.
+Cada serviço é dono do próprio PostgreSQL. Eles nunca compartilham tabela, e essa é a questão
+inteira: se compartilhassem, o outbox não teria razão de existir, porque bastaria escrever na
+tabela do vizinho dentro da mesma transação.
 
-## The three problems this project is really about
+## Os três problemas que este projeto é realmente sobre
 
-**1. The dual write.** Saving to the database and publishing to Kafka are two
-systems and there is no transaction covering both. Publish first and the
-process may die before saving; save first and it may die before publishing.
-Solved with a [transactional outbox](docs/adr/002-outbox-em-vez-de-publicar-direto.md):
-the message is written in the same transaction as the state change, and a
-separate publisher sends it. That trades "may lose an event" for "may send the
-same event twice", which has a known answer.
+**1. A escrita dupla.** Salvar no banco e publicar no Kafka são dois sistemas, e não existe
+transação cobrindo os dois. Publicar primeiro e o processo pode morrer antes de salvar; salvar
+primeiro e ele pode morrer antes de publicar. Resolvido com
+[outbox transacional](docs/adr/002-outbox-em-vez-de-publicar-direto.md): a mensagem é gravada na
+mesma transação da mudança de estado, e um publicador separado a envia. Troca "pode perder
+evento" por "pode enviar o mesmo evento duas vezes", que tem resposta conhecida.
 
-**2. At-least-once delivery.** Kafka redelivers. Every consumer keeps an inbox
-table whose primary key is the event id, so the second attempt hits the
-constraint instead of applying the effect again. The check before it is only an
-optimisation; the database is what guarantees.
+**2. Entrega pelo menos uma vez.** O Kafka reentrega. Todo consumidor mantém uma tabela de inbox
+cuja chave primária é o id do evento, então a segunda tentativa bate na restrição em vez de
+aplicar o efeito de novo. A conferência antes disso é só otimização; quem garante é o banco.
 
-**3. There is no distributed rollback.** A saga is a sequence of local
-transactions, each with a compensating action. The compensations here are
-release-the-reservation and refund-the-payment, and both must be idempotent,
-because the message that triggers them will arrive more than once.
+**3. Não existe rollback distribuído.** Uma saga é uma sequência de transações locais, cada uma
+com uma ação compensatória. As compensações aqui são devolver a reserva e estornar o pagamento, e
+as duas precisam ser idempotentes, porque a mensagem que as dispara vai chegar mais de uma vez.
 
-## Running it
+## Rodando
 
 ```bash
-git clone <repo> feira && cd feira
+git clone https://github.com/fabriciojunio/feira-do-comando.git feira && cd feira
 docker compose up -d
 ```
 
-Then:
-
 ```bash
-# stock a product
-curl -X POST localhost:8082/api/v1/estoque/itens \
-  -H 'Content-Type: application/json' \
-  -d '{"sku":"CAF-500","descricao":"Cafe torrado 500g","quantidade":10}'
+# cadastra um produto no estoque
+curl -X POST http://localhost:8081/api/v1/produtos \
+  -H "Content-Type: application/json" \
+  -d '{"sku":"CAFE-500","descricao":"Café 500g","quantidade":10}'
 
-# place an order
-curl -X POST localhost:8081/api/v1/pedidos \
-  -H 'Content-Type: application/json' \
-  -H 'X-Cliente-Id: cliente-1' \
-  -H 'Idempotency-Key: minha-chave-1' \
-  -d '{"itens":[{"sku":"CAF-500","descricao":"Cafe","quantidade":2,"precoUnitario":"24.90"}]}'
+# faz um pedido
+curl -X POST http://localhost:8080/api/v1/pedidos \
+  -H "Content-Type: application/json" \
+  -H "X-Cliente-Id: 11111111-1111-1111-1111-111111111111" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"itens":[{"sku":"CAFE-500","quantidade":2,"precoUnitario":29.90}]}'
 
-# watch the saga move
-curl localhost:8081/api/v1/pedidos/<id> -H 'X-Cliente-Id: cliente-1'
+# acompanha a saga andando
+curl http://localhost:8083/api/v1/consulta/pedidos/<id>
 ```
 
-| Where | What |
-|---|---|
-| `localhost:8081` | orders API, `/swagger-ui.html` |
-| `localhost:8082` | stock API |
-| `localhost:8083` | payments API |
-| `localhost:8090` | Redpanda console, to watch the topics |
-
-**Forcing a failure.** The simulated acquirer declines by cents value, the same
-way a real acquirer's sandbox does: an order totalling `x.13` fails for
-insufficient funds, `x.66` for suspected fraud, `x.99` with a temporary error.
-That is how you see the compensation path without waiting for luck.
-
-## Tests
+## Testes
 
 ```bash
 mvn verify
 ```
 
-189 tests, none of them requiring Docker. PostgreSQL is started as a real
-process by the test itself and Kafka comes from `spring-kafka-test`, because a
-test that only runs when someone remembers to start the infrastructure is a
-test that does not run.
+**189 testes, e nenhum precisa de Docker instalado.** O PostgreSQL sobe como processo de verdade
+dentro do próprio teste e o Kafka vem do `spring-kafka-test`, porque teste que só roda quando
+alguém lembra de subir a infraestrutura é teste que não roda.
 
-| Suite | What it proves |
+| Suíte | O que prova |
 |---|---|
-| `SagaDoPedidoTest` (36) | the state machine under repeated, out-of-order and late events, including the race between payment approval and cancellation |
-| `ConcorrenciaDeReservaTest` (6) | ten threads fighting over three units never oversell, with real threads and a real database |
-| `FluxoDePedidoTest` (21) | the whole application: outbox reaches the topic, consumer reads it, saga advances |
-| `ArquiteturaTest` (12) | the layering still holds, checked by ArchUnit rather than by a diagram |
-| `ContratosTest` (14) | events survive the round trip through JSON |
-| `VazaoDePedidosTest` (3) | throughput under concurrent load, and that a repeated idempotency key under a race answers every caller correctly |
-| `web/` (42) | the saga narrative the customer reads, and that the forced-decline demo is reachable at all |
-| `ProjecaoDoPedidoTest` (15) | the read model against a real MongoDB: repeated delivery, out-of-order events, and the refund showing up |
-| `FluxoDaProjecaoTest` (6) | topic to HTTP response, with real Kafka and real MongoDB |
+| `SagaDoPedidoTest` (36) | a máquina de estados sob evento repetido, fora de ordem e atrasado, incluindo a corrida entre aprovação do pagamento e cancelamento |
+| `ConcorrenciaDeReservaTest` (6) | dez threads disputando três unidades nunca vendem a mais, com threads de verdade e banco de verdade |
+| `FluxoDePedidoTest` (21) | a aplicação inteira: o outbox chega ao tópico, o consumidor lê, a saga anda |
+| `ArquiteturaTest` (12) | as camadas continuam de pé, conferidas por ArchUnit e não por um diagrama |
+| `ContratosTest` (14) | os eventos sobrevivem à ida e volta pelo JSON |
+| `VazaoDePedidosTest` (3) | vazão sob carga concorrente, e que chave de idempotência repetida numa corrida responde certo para todo mundo |
+| `ProjecaoDoPedidoTest` (15) | o modelo de leitura contra um MongoDB real: entrega repetida, evento fora de ordem e o estorno aparecendo |
+| `FluxoDaProjecaoTest` (6) | do tópico até a resposta HTTP, com Kafka e MongoDB reais |
+| `web/` (42) | a narrativa da saga que o cliente lê, e que a demonstração de recusa forçada é alcançável |
 
-Three of those suites earned their keep during the build. ArchUnit caught a
-package cycle between `aplicacao` and `infraestrutura`. The end-to-end test
-caught an `ObjectMapper` bean that was silently disabling RFC 9457 error
-serialisation across the whole API. And the load test caught the one described
-below.
+Três dessas suítes se pagaram durante a construção. O ArchUnit pegou um ciclo de pacote entre
+`aplicacao` e `infraestrutura`. O teste de ponta a ponta pegou um bean de `ObjectMapper` que
+estava desligando em silêncio a serialização de erro no formato RFC 9457 em toda a API. E o teste
+de carga pegou o defeito descrito abaixo.
 
-### Throughput
+### Vazão
 
-The load test prints its measurement into the build output:
+O teste de carga imprime a medição na saída do build:
 
 ```
-[vazao] 120 orders created in 1.11s across 8 threads: 108.1 orders/s (9.2 ms per order)
+[vazao] 120 pedidos criados em 1,11s com 8 threads: 108,1 pedidos/s (9,2 ms por pedido)
 ```
 
-Read that number for what it is. It runs against an embedded PostgreSQL, in the
-same JVM, through MockMvc, so it measures neither the network nor the proxy. It
-is not a substitute for k6 against a production-shaped environment. What it is
-good for is a floor and a trend: a regression that doubles the cost per order
-shows up in the build rather than in the demo.
+Leia esse número pelo que ele é. Roda contra PostgreSQL embarcado, na mesma JVM, por MockMvc,
+então não mede rede nem proxy. Não substitui k6 contra um ambiente com forma de produção. Para o
+que ele serve é como piso e como tendência: uma regressão que dobre o custo por pedido aparece no
+build em vez de aparecer na demonstração.
 
-It also caught a real defect. Twelve concurrent requests carrying the same
-idempotency key did produce exactly one order, which is the guarantee that
-matters, but the eleven losers of the race received a 500. The recovery path
-re-read the winning order from inside the very transaction the constraint
-violation had already doomed, so the read was useless and the commit failed
-anyway. The transactional boundary now ends before the recovery, in
-`GravadorDePedido`, and every caller gets the winning order back.
+Ele também pegou um defeito real. Doze requisições concorrentes com a mesma chave de idempotência
+produziram exatamente um pedido, que é a garantia que importa, mas os onze perdedores da corrida
+receberam 500. O caminho de recuperação relia o pedido vencedor de dentro da mesma transação que
+a violação de restrição já tinha condenado, então a leitura não valia nada e o commit falhava do
+mesmo jeito. A fronteira transacional agora termina antes da recuperação, em `GravadorDePedido`,
+e todo mundo recebe o pedido vencedor de volta.
 
-## Design decisions
+## Decisões de arquitetura
 
-Each of these has a short document explaining the trade-off, including what was
-given up:
+Cada uma tem um documento curto explicando o custo, inclusive o que se abriu mão:
 
-- [001 — saga inside the aggregate, not in a separate orchestrator](docs/adr/001-saga-no-agregado.md)
-- [002 — outbox instead of publishing directly](docs/adr/002-outbox-em-vez-de-publicar-direto.md)
-- [003 — optimistic locking on stock](docs/adr/003-trava-otimista-no-estoque.md)
-- [004 — one database per service](docs/adr/004-um-banco-por-servico.md)
-- [005 — embedded PostgreSQL and Kafka in tests](docs/adr/005-infra-embutida-nos-testes.md)
+- [001, a saga dentro do agregado, e não num orquestrador à parte](docs/adr/001-saga-no-agregado.md)
+- [002, outbox em vez de publicar direto](docs/adr/002-outbox-em-vez-de-publicar-direto.md)
+- [003, trava otimista no estoque](docs/adr/003-trava-otimista-no-estoque.md)
+- [004, um banco por serviço](docs/adr/004-um-banco-por-servico.md)
+- [005, PostgreSQL e Kafka embarcados nos testes](docs/adr/005-infra-embutida-nos-testes.md)
 
-## The read model
+## O modelo de leitura
 
-Each service owns its database, which is the point. The cost is that no single
-one of them can answer "how is my order doing": the saga state lives in orders,
-the reservation in inventory, and the charge in payments. Until now the browser
-did the join, with three calls.
+Cada serviço é dono do próprio banco, e essa é a questão. O custo é que nenhum deles sozinho
+responde "como está o meu pedido": o estado da saga está em pedidos, a reserva em estoque e a
+cobrança em pagamentos. Até então o navegador fazia a junção, com três chamadas.
 
-`servico-consulta` consumes the same Kafka events under its own consumer group
-and keeps one denormalized document per order in **MongoDB**. One read returns
-the order, its items, the charge and the timeline.
+O `servico-consulta` consome os mesmos eventos do Kafka sob um grupo de consumo próprio e mantém
+um documento desnormalizado por pedido no **MongoDB**. Uma leitura devolve o pedido, os itens, a
+cobrança e a linha do tempo.
 
-MongoDB rather than a fourth PostgreSQL because what the screen wants *is* a
-document. In tables that becomes a four-way join to build a response that is
-never read in pieces. And the choice is cheap to defend from the other side:
-this data is **not** the source of truth. It is derived from the events and can
-be thrown away and rebuilt from the topic. Strong consistency stays in each
-service's PostgreSQL, where it is actually enforced.
+MongoDB em vez de um quarto PostgreSQL porque o que a tela quer *é* um documento. Em tabelas isso
+vira uma junção de quatro para montar uma resposta que nunca é lida em pedaços. E a escolha é
+barata de defender pelo outro lado: este dado **não** é a fonte da verdade. Ele é derivado dos
+eventos e pode ser jogado fora e reconstruído a partir do tópico. A consistência forte fica no
+PostgreSQL de cada serviço, onde ela é de fato imposta.
 
-What it does not give you is immediate consistency. The projection follows the
-topic, so there is a window between the order changing state and the read
-reflecting it. For following a saga that is fine, and the screen already polls.
-For deciding whether an order can still be cancelled, the order service remains
-the authority.
+O que isso não dá é consistência imediata. A projeção segue o tópico, então existe uma janela
+entre o pedido mudar de estado e a leitura refletir. Para acompanhar uma saga isso serve, e a
+tela já consulta de tempos em tempos. Para decidir se um pedido ainda pode ser cancelado, quem
+manda continua sendo o serviço de pedidos.
 
-Idempotency lives in the document itself, in `eventosAplicados`, rather than in
-the platform's inbox. The projection already has to record what it applied so
-it does not duplicate the timeline, and a second control table would be the
-same fact in two places.
+A idempotência mora no próprio documento, em `eventosAplicados`, e não no inbox da plataforma. A
+projeção já precisa registrar o que aplicou para não duplicar a linha do tempo, e uma segunda
+tabela de controle seria o mesmo fato guardado em dois lugares.
 
-## Infrastructure as code
+## Infraestrutura como código
 
-`infra/` holds Terraform for AWS: a VPC with private subnets, one RDS
-PostgreSQL per service, MSK Serverless for Kafka, and one ECR repository per
-image.
+`infra/` tem Terraform para a AWS: uma VPC com sub-redes privadas, um RDS PostgreSQL por serviço,
+MSK Serverless para o Kafka e um repositório ECR por imagem.
 
-`terraform fmt` and `terraform validate` run on every build. Neither needs AWS
-credentials: they check syntax, references between resources and attribute
-types. What they do **not** check is whether the resources actually exist in an
-account, and nothing here has been applied to one.
+`terraform fmt` e `terraform validate` rodam a cada build. Nenhum dos dois precisa de credencial
+da AWS: eles conferem sintaxe, referência entre recursos e tipo de atributo. O que eles **não**
+conferem é se os recursos existem de fato numa conta, e nada aqui foi aplicado em uma.
 
 ## Kubernetes
 
-Plain manifests under [`k8s/`](k8s/), applied with `kubectl apply -k k8s/`.
-Three databases, one per service, for the same reason the compose file has
-three. Two replicas per service, which the outbox allows because `SKIP LOCKED`
-lets instances share the message table without publishing anything twice.
+Manifestos simples em [`k8s/`](k8s/), aplicados com `kubectl apply -k k8s/`. Três bancos, um por
+serviço, pelo mesmo motivo que o compose tem três. Duas réplicas por serviço, o que o outbox
+permite porque o `SKIP LOCKED` deixa as instâncias dividirem a tabela de mensagens sem publicar
+nada duas vezes.
 
-Two levels of checking run on every build. `kubeconform` validates the
-manifests against the Kubernetes API schemas, so a wrong `apiVersion` or a
-misspelled field fails the pipeline rather than the `apply`. Then a real `kind`
-cluster is created and `kubectl apply -k k8s/` runs against it, waiting for the
-broker and the three databases to roll out. That second step is what catches a
-bad probe, an impossible resource request or a mismatched selector, which
-schema validation cannot see.
+Dois níveis de conferência rodam a cada build. O `kubeconform` valida os manifestos contra os
+esquemas da API do Kubernetes, então uma `apiVersion` errada ou um campo escrito errado reprova o
+pipeline em vez de reprovar o `apply`. Depois um cluster `kind` de verdade é criado e o
+`kubectl apply -k k8s/` roda contra ele, esperando o corretor e os três bancos subirem. Esse
+segundo passo é o que pega sonda mal configurada, pedido de recurso impossível ou seletor que não
+casa, coisas que validação de esquema não enxerga.
 
-They have still never run on a production cluster, and the directory README
-says so.
+Eles ainda assim nunca rodaram num cluster de produção, e o README do diretório diz isso.
 
 ## Stack
 
-Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL, Flyway, Kafka, Redpanda,
-Micrometer and Prometheus, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit,
-Docker.
+Java 21, Spring Boot 3.5, Spring Data JPA, PostgreSQL, MongoDB, Flyway, Kafka, Redpanda,
+Micrometer e Prometheus, OpenAPI, JUnit 5, AssertJ, Awaitility, ArchUnit, Docker, Kubernetes,
+Terraform.
 
-Errors follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html)
-(Problem Details), with a stable `codigo` extension so clients can branch
-without parsing prose.
+Os erros seguem a [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html), com uma extensão
+`codigo` estável para o cliente poder decidir sem interpretar texto corrido.
 
-## What is not here
+## O que não está aqui
 
-Said upfront rather than discovered later:
+Dito de uma vez, em vez de descoberto depois:
 
-- **No real acquirer.** `AdquirenteSimulado` sits behind an interface with the
-  behaviour of a real one, including declines. Swapping it for Cielo or Stone
-  means writing one class.
-- **No authentication.** The client id arrives in a header. In a real system it
-  comes from a validated token; keeping it simple leaves the focus on the saga.
-- **No Kubernetes manifests.** `docker compose` covers what this project needs
-  to demonstrate.
+- **Não há adquirente de verdade.** O `AdquirenteSimulado` fica atrás de uma interface com o
+  comportamento de um real, recusas incluídas. Trocar por Cielo ou Stone é escrever uma classe.
+- **Não há autenticação.** O id do cliente chega num cabeçalho. Num sistema real ele viria de um
+  token validado; manter simples deixa o foco na saga.
+- **Nunca rodou em cluster nem em conta da AWS de verdade.** Os manifestos do Kubernetes são
+  validados contra os esquemas e aplicados num cluster `kind` descartável a cada build, e o
+  Terraform passa pelo `validate`, mas nenhum dos dois foi para infraestrutura de produção.
