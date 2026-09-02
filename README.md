@@ -193,6 +193,7 @@ Cada uma tem um documento curto explicando o custo, inclusive o que se abriu mã
 - [004, um banco por serviço](docs/adr/004-um-banco-por-servico.md)
 - [005, PostgreSQL e Kafka embarcados nos testes](docs/adr/005-infra-embutida-nos-testes.md)
 - [006, rastro distribuído que atravessa o outbox](docs/adr/006-rastro-distribuido.md)
+- [007, migração de esquema sem derrubar a versão anterior](docs/adr/007-migracao-sem-parada.md)
 
 ## O modelo de leitura
 
