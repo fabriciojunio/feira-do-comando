@@ -176,6 +176,17 @@ docker compose up -d --wait
 k6 run carga/pedidos.js
 ```
 
+From its first CI run:
+
+```
+[carga] 24483 pedidos criados
+[carga] p95 da requisicao: 51 ms
+[carga] taxa de falha: 0.00%
+```
+
+Compare that with the 108 orders per second from the in-process test. The two measure different
+things, and this one is the one that includes network, serialisation and the gateway.
+
 It runs in CI on every push to the main branch, not on every pull request, because it brings the
 whole system up and would cost minutes that fast feedback cannot pay.
 
