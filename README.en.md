@@ -214,6 +214,7 @@ given up:
 - [004 — one database per service](docs/adr/004-um-banco-por-servico.md)
 - [005 — embedded PostgreSQL and Kafka in tests](docs/adr/005-infra-embutida-nos-testes.md)
 - [006 — distributed tracing that survives the outbox](docs/adr/006-rastro-distribuido.md)
+- [007 — schema migration that does not break the previous version](docs/adr/007-migracao-sem-parada.md)
 
 ## The read model
 
