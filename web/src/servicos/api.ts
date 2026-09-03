@@ -1,28 +1,28 @@
 /**
- * Cliente dos tres servicos.
+ * Cliente dos três serviços.
  *
- * Tudo passa por aqui de proposito: e o unico lugar que conhece o formato do
- * Problem Details, o cabecalho de cliente e a chave de idempotencia. As telas
+ * Tudo passa por aqui de propósito: é o único lugar que conhece o formato do
+ * Problem Details, o cabeçalho de cliente e a chave de idempotência. As telas
  * falam de tela.
  */
 
 import { estoqueSimulado, pedidosSimulados, cobrancasSimuladas } from './demonstracao';
 import { FalhaDaApi } from './falha';
 
-// Reexportado para as telas continuarem importando tudo de um lugar so.
+// Reexportado para as telas continuarem importando tudo de um lugar só.
 export { FalhaDaApi };
 
 const BASE = import.meta.env.VITE_API_BASE ?? '';
 
 /**
- * Liga a saga simulada no navegador, para a demonstracao publicada.
+ * Liga a saga simulada no navegador, para a demonstração publicada.
  *
- * O sistema de verdade sao quatro servicos Java, um Kafka e tres bancos, e isso
- * nao cabe em camada gratuita. Sem este modo, a tela publicada carregaria e
- * quebraria no primeiro clique, o que e pior que nao ter demonstracao.
+ * O sistema de verdade são quatro serviços Java, um Kafka e três bancos, e isso
+ * não cabe em camada gratuita. Sem este modo, a tela publicada carregaria e
+ * quebraria no primeiro clique, o que é pior que não ter demonstração.
  *
- * Mesma ideia dos adaptadores do back-end: a tela nao sabe qual dos dois esta
- * atendendo, e o contrato e o mesmo.
+ * Mesma ideia dos adaptadores do back-end: a tela não sabe qual dos dois está
+ * atendendo, e o contrato é o mesmo.
  */
 export const MODO_DEMONSTRACAO = import.meta.env.VITE_DEMONSTRACAO === 'true';
 
@@ -136,7 +136,7 @@ const pedidosHttp = {
     chamar<Pedido>('/api/v1/pedidos', {
       metodo: 'POST',
       // Rede cai, botao e clicado duas vezes, aplicativo tenta de novo. Sem a
-      // chave, cada tentativa vira um pedido e o cliente e cobrado tres vezes.
+      // chave, cada tentativa vira um pedido e o cliente é cobrado três vezes.
       cabecalhos: { 'Idempotency-Key': chaveDeIdempotencia },
       corpo: { itens },
     }),
@@ -148,7 +148,7 @@ const pedidosHttp = {
   cancelar: (id: string) => chamar<Pedido>(`/api/v1/pedidos/${id}`, { metodo: 'DELETE' }),
 };
 
-// ---------- Cobrancas ----------
+// ---------- Cobranças ----------
 
 export type Cobranca = {
   pedidoId: string;
@@ -167,7 +167,7 @@ const cobrancasHttp = {
 };
 
 // A escolha acontece uma vez, aqui. As telas importam estoque, pedidos e
-// cobrancas sem saber de onde vem a resposta.
+// cobranças sem saber de onde vem a resposta.
 export const estoque = MODO_DEMONSTRACAO ? estoqueSimulado : estoqueHttp;
 export const pedidos = MODO_DEMONSTRACAO ? pedidosSimulados : pedidosHttp;
 export const cobrancas = MODO_DEMONSTRACAO ? cobrancasSimuladas : cobrancasHttp;

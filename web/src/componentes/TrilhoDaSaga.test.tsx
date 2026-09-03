@@ -7,7 +7,7 @@ import type { Cobranca, Pedido } from '@/servicos/api';
  * A narrativa que o cliente le.
  *
  * Vale testar porque e aqui que o estado interno da saga vira frase. Um erro
- * neste arquivo nao quebra nada no servidor e faz o cliente entender errado o
+ * neste arquivo não quebra nada no servidor e faz o cliente entender errado o
  * que aconteceu com o dinheiro dele, que e pior.
  */
 
@@ -77,7 +77,7 @@ describe('Trilho da saga', () => {
   });
 
   /**
-   * O caso que mais gera duvida do cliente: o dinheiro saiu e voltou. A tela
+   * O caso que mais gera dúvida do cliente: o dinheiro saiu e voltou. A tela
    * precisa dizer isso com todas as letras.
    */
   it('diz explicitamente quando houve estorno', () => {
@@ -86,12 +86,12 @@ describe('Trilho da saga', () => {
       cobrancaCom({ situacao: 'ESTORNADA', valor: 'R$ 49,80' }),
     );
 
-    const cobranca = passos.find((p) => p.titulo === 'Cobranca');
+    const cobranca = passos.find((p) => p.titulo === 'Cobrança');
     expect(cobranca?.situacao).toBe('falhou');
     expect(cobranca?.detalhe).toContain('estornada');
   });
 
-  it('nao promete cobranca quando faltou estoque', () => {
+  it('não promete cobrança quando faltou estoque', () => {
     const passos = montarPassos(
       pedidoCom({
         status: 'CANCELADO',
@@ -105,10 +105,10 @@ describe('Trilho da saga', () => {
     expect(passos[1]?.detalhe).toContain('CAF-500');
     expect(passos[2]?.situacao)
       .toBe('esperando');
-    expect(passos[2]?.detalhe).toContain('Nao chegou a ser cobrado');
+    expect(passos[2]?.detalhe).toContain('Não chegou a ser cobrado');
   });
 
-  it('mostra o passo de devolucao enquanto a compensacao acontece', () => {
+  it('mostra o passo de devolução enquanto a compensação acontece', () => {
     const passos = montarPassos(pedidoCom({ status: 'CANCELANDO' }), null);
 
     expect(passos.some((p) => p.titulo.includes('Devolvendo'))).toBe(true);
@@ -126,7 +126,7 @@ describe('Trilho da saga', () => {
       cobrancaCom({ situacao: 'RECUSADA', motivoDaRecusa: 'SALDO_INSUFICIENTE' }),
     );
 
-    const cobranca = passos.find((p) => p.titulo === 'Cobranca');
+    const cobranca = passos.find((p) => p.titulo === 'Cobrança');
     expect(cobranca?.detalhe).toContain('saldo insuficiente');
     expect(cobranca?.detalhe).not.toContain('SALDO_INSUFICIENTE');
   });

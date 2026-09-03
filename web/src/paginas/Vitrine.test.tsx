@@ -8,9 +8,9 @@ import { estoque, pedidos, FalhaDaApi, type Saldo } from '@/servicos/api';
 /**
  * A vitrine.
  *
- * O que precisa de teste aqui e a fronteira entre o preco, que e local, e o
- * saldo, que vem do servico de estoque. Um erro nessa juncao deixa o cliente
- * comprar o que nao existe, e o pedido so falha la na frente, ja com a saga
+ * O que precisa de teste aqui é a fronteira entre o preço, que é local, e o
+ * saldo, que vem do serviço de estoque. Um erro nessa junção deixa o cliente
+ * comprar o que não existe, e o pedido só falha lá na frente, já com a saga
  * andando.
  */
 
@@ -42,7 +42,7 @@ function montar() {
   );
 }
 
-/** A banca do produto, para nao caçar texto solto na pagina inteira. */
+/** A banca do produto, para não caçar texto solto na página inteira. */
 function banca(nome: string) {
   return screen.getByLabelText(`Quantidade de ${nome}`).closest('article')!;
 }
@@ -53,85 +53,85 @@ describe('Vitrine', () => {
     vi.mocked(pedidos.criar).mockReset();
   });
 
-  it('avisa que o estoque esta vazio em vez de mostrar uma vitrine muda', async () => {
+  it('avisa que o estoque está vazio em vez de mostrar uma vitrine muda', async () => {
     montar();
 
-    expect(await screen.findByText(/O estoque esta vazio/)).toBeInTheDocument();
+    expect(await screen.findByText(/O estoque está vazio/)).toBeInTheDocument();
   });
 
   /**
-   * Produto sem registro no estoque e diferente de produto esgotado. O primeiro
-   * e configuracao faltando, o segundo e venda perdida, e quem opera a loja
-   * precisa saber qual dos dois esta olhando.
+   * Produto sem registro no estoque é diferente de produto esgotado. O primeiro
+   * é configuração faltando, o segundo é venda perdida, e quem opera a loja
+   * precisa saber qual dos dois está olhando.
    */
-  it('separa produto nao cadastrado de produto esgotado', async () => {
+  it('separa produto não cadastrado de produto esgotado', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 0)]);
 
     montar();
 
     await waitFor(() => {
-      expect(within(banca('Cafe torrado e moido') as HTMLElement).getByText('esgotado')).toBeInTheDocument();
+      expect(within(banca('Café torrado e moído') as HTMLElement).getByText('esgotado')).toBeInTheDocument();
     });
-    expect(within(banca('Acucar cristal') as HTMLElement).getByText('nao cadastrado')).toBeInTheDocument();
+    expect(within(banca('Açúcar cristal') as HTMLElement).getByText('não cadastrado')).toBeInTheDocument();
   });
 
-  it('destaca o saldo curto para quem esta olhando a banca', async () => {
+  it('destaca o saldo curto para quem está olhando a banca', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 2), saldoDe('ACU-1KG', 40)]);
 
     montar();
 
     await waitFor(() => {
-      expect(within(banca('Cafe torrado e moido') as HTMLElement).getByText('restam 2')).toBeInTheDocument();
+      expect(within(banca('Café torrado e moído') as HTMLElement).getByText('restam 2')).toBeInTheDocument();
     });
-    expect(within(banca('Acucar cristal') as HTMLElement).getByText('40 disponiveis')).toBeInTheDocument();
+    expect(within(banca('Açúcar cristal') as HTMLElement).getByText('40 disponíveis')).toBeInTheDocument();
   });
 
   /**
-   * O saldo mostrado e o disponivel. Unidade reservada para outro pedido nao
-   * esta a venda, mesmo estando no galpao.
+   * O saldo mostrado é o disponível. Unidade reservada para outro pedido não
+   * está à venda, mesmo estando no galpão.
    */
-  it('mostra o reservado ao lado sem somar ao que esta a venda', async () => {
+  it('mostra o reservado ao lado sem somar ao que está à venda', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 4, 6)]);
 
     montar();
 
-    const caf = (await waitFor(() => banca('Cafe torrado e moido'))) as HTMLElement;
-    expect(within(caf).getByText('4 disponiveis')).toBeInTheDocument();
+    const caf = (await waitFor(() => banca('Café torrado e moído'))) as HTMLElement;
+    expect(within(caf).getByText('4 disponíveis')).toBeInTheDocument();
     expect(within(caf).getByText('6 reservados')).toBeInTheDocument();
   });
 
-  it('nao deixa levar mais do que existe, mesmo digitando direto', async () => {
+  it('não deixa levar mais do que existe, mesmo digitando direto', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 3)]);
     const usuario = userEvent.setup();
 
     montar();
 
-    const campo = (await screen.findByLabelText('Quantidade de Cafe torrado e moido')) as HTMLInputElement;
+    const campo = (await screen.findByLabelText('Quantidade de Café torrado e moído')) as HTMLInputElement;
     await usuario.clear(campo);
     await usuario.type(campo, '99');
 
     await waitFor(() => expect(campo.value).toBe('3'));
-    expect(within(banca('Cafe torrado e moido') as HTMLElement).getByRole('button', { name: 'juntar' })).toBeDisabled();
+    expect(within(banca('Café torrado e moído') as HTMLElement).getByRole('button', { name: 'juntar' })).toBeDisabled();
   });
 
-  it('soma a sacola com o preco do catalogo', async () => {
+  it('soma a sacola com o preço do catálogo', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 10)]);
     const usuario = userEvent.setup();
 
     montar();
 
-    const campo = await screen.findByLabelText('Quantidade de Cafe torrado e moido');
+    const campo = await screen.findByLabelText('Quantidade de Café torrado e moído');
     await usuario.clear(campo);
     await usuario.type(campo, '2');
 
     // 2 x 24,90
     expect(await screen.findByText(/R\$\s?49,80/)).toBeInTheDocument();
-    expect(screen.getByText('2 x Cafe torrado e moido')).toBeInTheDocument();
+    expect(screen.getByText('2 x Café torrado e moído')).toBeInTheDocument();
   });
 
   /**
-   * O aviso de recusa forcada e o que permite demonstrar a compensacao sem
-   * depender de sorte. Se ele sumir, quem apresenta o sistema nao consegue
+   * O aviso de recusa forçada é o que permite demonstrar a compensação sem
+   * depender de sorte. Se ele sumir, quem apresenta o sistema não consegue
    * mostrar o estorno acontecendo.
    */
   it('avisa quando o total cai nos centavos que o adquirente recusa', async () => {
@@ -142,7 +142,7 @@ describe('Vitrine', () => {
 
     const campo = await screen.findByLabelText('Quantidade de Sal refinado');
 
-    // 6 x 2,38 = 14,28: resto 28, nenhum desfecho forcado.
+    // 6 x 2,38 = 14,28: resto 28, nenhum desfecho forçado.
     await usuario.clear(campo);
     await usuario.type(campo, '6');
     await screen.findByText(/R\$\s?14,28/);
@@ -156,7 +156,7 @@ describe('Vitrine', () => {
     expect(screen.getByText('suspeita de fraude')).toBeInTheDocument();
   });
 
-  it('fecha o pedido com os itens da sacola e uma chave de idempotencia', async () => {
+  it('fecha o pedido com os itens da sacola e uma chave de idempotência', async () => {
     vi.mocked(estoque.itens).mockResolvedValue([saldoDe('CAF-500', 10)]);
     vi.mocked(pedidos.criar).mockResolvedValue({
       id: '11111111-1111-1111-1111-111111111111',
@@ -165,7 +165,7 @@ describe('Vitrine', () => {
 
     montar();
 
-    const campo = await screen.findByLabelText('Quantidade de Cafe torrado e moido');
+    const campo = await screen.findByLabelText('Quantidade de Café torrado e moído');
     await usuario.clear(campo);
     await usuario.type(campo, '2');
     await usuario.click(screen.getByRole('button', { name: /fechar pedido/i }));
@@ -173,17 +173,17 @@ describe('Vitrine', () => {
     await waitFor(() => expect(pedidos.criar).toHaveBeenCalledTimes(1));
     const [itens, chave] = vi.mocked(pedidos.criar).mock.calls[0]!;
     expect(itens).toEqual([
-      { sku: 'CAF-500', descricao: 'Cafe torrado e moido', quantidade: 2, precoUnitario: '24.90' },
+      { sku: 'CAF-500', descricao: 'Café torrado e moído', quantidade: 2, precoUnitario: '24.90' },
     ]);
     expect(chave).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it('diz que o servico de estoque nao respondeu em vez de mostrar prateleira vazia', async () => {
+  it('diz que o serviço de estoque não respondeu em vez de mostrar prateleira vazia', async () => {
     vi.mocked(estoque.itens).mockRejectedValue(new FalhaDaApi('CONEXAO', 'Falhou', 0));
 
     montar();
 
     expect(await screen.findByText('Falhou')).toBeInTheDocument();
-    expect(screen.queryByText(/O estoque esta vazio/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/O estoque está vazio/)).not.toBeInTheDocument();
   });
 });

@@ -1,15 +1,15 @@
 import type { Cobranca, Pedido } from '@/servicos/api';
 
 /**
- * Mostra onde o pedido esta dentro da saga.
+ * Mostra onde o pedido está dentro da saga.
  *
- * Esta e a tela que explica o sistema. Um pedido "em processamento" nao diz
- * nada; ver que o estoque ja separou e que a cobranca esta em andamento diz
+ * Esta é a tela que explica o sistema. Um pedido "em processamento" não diz
+ * nada; ver que o estoque já separou e que a cobrança está em andamento diz
  * tudo, e reduz pela metade a vontade de ligar para o suporte.
  *
- * Os passos sao derivados do status, e nao de um historico vindo do servidor.
- * O motivo e simples: o status e a fonte de verdade da saga, e montar a
- * narrativa a partir dele garante que a tela nunca conte uma historia
+ * Os passos são derivados do status, e não de um histórico vindo do servidor.
+ * O motivo é simples: o status é a fonte de verdade da saga, e montar a
+ * narrativa a partir dele garante que a tela nunca conte uma história
  * diferente da que o banco guarda.
  */
 
@@ -46,20 +46,20 @@ export function montarPassos(pedido: Pedido, cobranca: Cobranca | null): Passo[]
   const reserva: Passo = (() => {
     if (semEstoque) {
       return {
-        titulo: 'Separacao no estoque',
-        detalhe: pedido.detalheDoCancelamento ?? 'Sem saldo disponivel',
+        titulo: 'Separação no estoque',
+        detalhe: pedido.detalheDoCancelamento ?? 'Sem saldo disponível',
         situacao: 'falhou' as Situacao,
       };
     }
     if (status === 'RECEBIDO') {
       return {
-        titulo: 'Separacao no estoque',
+        titulo: 'Separação no estoque',
         detalhe: 'Separando os itens',
         situacao: 'agora' as Situacao,
       };
     }
     return {
-      titulo: 'Separacao no estoque',
+      titulo: 'Separação no estoque',
       detalhe: 'Itens separados',
       situacao: 'concluido' as Situacao,
     };
@@ -68,42 +68,42 @@ export function montarPassos(pedido: Pedido, cobranca: Cobranca | null): Passo[]
   const pagamento: Passo = (() => {
     if (semEstoque) {
       return {
-        titulo: 'Cobranca',
-        detalhe: 'Nao chegou a ser cobrado',
+        titulo: 'Cobrança',
+        detalhe: 'Não chegou a ser cobrado',
         situacao: 'esperando' as Situacao,
       };
     }
     if (cobranca?.situacao === 'RECUSADA') {
       return {
-        titulo: 'Cobranca',
+        titulo: 'Cobrança',
         detalhe: `Recusada: ${legivel(cobranca.motivoDaRecusa)}`,
         situacao: 'falhou' as Situacao,
       };
     }
     if (cobranca?.situacao === 'ESTORNADA') {
       return {
-        titulo: 'Cobranca',
+        titulo: 'Cobrança',
         detalhe: `Aprovada e depois estornada (${cobranca.valor})`,
         situacao: 'falhou' as Situacao,
       };
     }
     if (status === 'CONFIRMADO' || cobranca?.situacao === 'APROVADA') {
       return {
-        titulo: 'Cobranca',
+        titulo: 'Cobrança',
         detalhe: cobranca?.referenciaExterna
-          ? `Aprovada, transacao ${cobranca.referenciaExterna}`
+          ? `Aprovada, transação ${cobranca.referenciaExterna}`
           : 'Aprovada',
         situacao: 'concluido' as Situacao,
       };
     }
     if (status === 'ESTOQUE_RESERVADO') {
       return {
-        titulo: 'Cobranca',
+        titulo: 'Cobrança',
         detalhe: 'Autorizando o pagamento',
         situacao: 'agora' as Situacao,
       };
     }
-    return { titulo: 'Cobranca', detalhe: 'Aguardando', situacao: 'esperando' as Situacao };
+    return { titulo: 'Cobrança', detalhe: 'Aguardando', situacao: 'esperando' as Situacao };
   })();
 
   const passos: Passo[] = [recebido, reserva, pagamento];
@@ -111,7 +111,7 @@ export function montarPassos(pedido: Pedido, cobranca: Cobranca | null): Passo[]
   if (cancelando) {
     passos.push({
       titulo: 'Devolvendo o que foi separado',
-      detalhe: 'A compensacao esta em andamento',
+      detalhe: 'A compensação está em andamento',
       situacao: 'agora',
     });
   }
@@ -121,7 +121,7 @@ export function montarPassos(pedido: Pedido, cobranca: Cobranca | null): Passo[]
     detalhe: cancelado
       ? (pedido.detalheDoCancelamento ?? legivel(pedido.motivoDoCancelamento))
       : status === 'CONFIRMADO'
-        ? 'Tudo certo, seu pedido esta fechado'
+        ? 'Tudo certo, seu pedido está fechado'
         : 'Aguardando os passos anteriores',
     situacao: cancelado ? 'falhou' : status === 'CONFIRMADO' ? 'concluido' : 'esperando',
   });

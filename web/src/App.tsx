@@ -28,7 +28,7 @@ export function App() {
               Meus pedidos
             </NavLink>
             <NavLink to="/operacao" className={({ isActive }) => (isActive ? 'ativo' : '')}>
-              Operacao
+              Operação
             </NavLink>
           </nav>
         </div>
@@ -47,7 +47,7 @@ export function App() {
       <footer className="rodape">
         <div className="envolucro espalha">
           <span>
-            Feira. Tres servicos, um topico entre eles e uma saga que precisa sobreviver a
+            Feira. Três serviços, um tópico entre eles e uma saga que precisa sobreviver a
             mensagem repetida.
           </span>
           <span className="mono">v0.1.0</span>
@@ -58,27 +58,27 @@ export function App() {
 }
 
 /**
- * Diz que isto e uma demonstracao, e diz onde esta o sistema.
+ * Diz que isto é uma demonstração, e diz onde está o sistema.
  *
- * Fica no topo e nao no rodape de proposito: quem abre a pagina precisa saber
- * antes de clicar, e nao depois de rolar ate o fim. Demonstracao que nao se
- * anuncia vira promessa que o sistema nao cumpre.
+ * Fica no topo e não no rodapé de propósito: quem abre a página precisa saber
+ * antes de clicar, e não depois de rolar até o fim. Demonstração que não se
+ * anuncia vira promessa que o sistema não cumpre.
  */
 function FaixaDaDemonstracao() {
   return (
     <div className="faixa-demonstracao">
       <div className="envolucro">
-        <strong>Modo demonstracao.</strong> A saga roda aqui no navegador, com as mesmas
-        transicoes do sistema: reserva de estoque, cobranca, e a compensacao quando o cartao
-        recusa. Nao ha back-end atras desta pagina, porque quatro servicos Java, um Kafka e tres
-        bancos nao cabem em camada gratuita. O sistema de verdade sobe com{' '}
+        <strong>Modo demonstração.</strong> A saga roda aqui no navegador, com as mesmas
+        transições do sistema: reserva de estoque, cobrança, e a compensação quando o cartão
+        recusa. Não há back-end atrás desta página, porque quatro serviços Java, um Kafka e três
+        bancos não cabem em camada gratuita. O sistema de verdade sobe com{' '}
         <code>docker compose up -d</code>.{' '}
         <a
           href="https://github.com/fabriciojunio/feira-do-comando"
           target="_blank"
           rel="noopener noreferrer"
         >
-          Codigo no GitHub
+          Código no GitHub
         </a>
         .
       </div>
@@ -90,7 +90,7 @@ function NaoEncontrado() {
   return (
     <section className="secao">
       <div className="envolucro">
-        <div className="aviso">Pagina nao encontrada.</div>
+        <div className="aviso">Página não encontrada.</div>
       </div>
     </section>
   );
