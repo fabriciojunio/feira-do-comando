@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Feira">
+  <!--
+    O toldo da barraca, que e a mesma marca do cabecalho: tres faixas verticais
+    em folha, papel e abobora. Sem texto, porque a 16 pixels letra vira sujeira.
+
+    O fundo e solido de proposito: a aba do navegador pode ser clara ou escura,
+    e quem garante o contraste tem que ser o icone, nao o tema de quem visita.
+  -->
+  <rect width="32" height="32" rx="7" fill="#23201c"/>
+  <g>
+    <rect x="6" y="7" width="6.67" height="13" fill="#2f6b4a"/>
+    <rect x="12.67" y="7" width="6.67" height="13" fill="#faf7f2"/>
+    <rect x="19.33" y="7" width="6.67" height="13" fill="#d9622b"/>
+  </g>
+  <!-- A barra da banca embaixo do toldo, que e o que faz o desenho ler como feira. -->
+  <rect x="4" y="21.5" width="24" height="2.5" rx="1.25" fill="#e8a020"/>
+</svg>

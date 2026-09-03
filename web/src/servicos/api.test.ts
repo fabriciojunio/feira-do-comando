@@ -5,9 +5,9 @@ import { CATALOGO, desfechoForcado, produtoDe } from './catalogo';
 /**
  * O cliente da API.
  *
- * O que importa testar aqui e o tratamento do erro: e ele que decide se a tela
- * mostra "sem estoque" ou "algo deu errado". O caminho feliz o backend ja
- * cobre; o formato do Problem Details, nao.
+ * O que importa testar aqui é o tratamento do erro: é ele que decide se a tela
+ * mostra "sem estoque" ou "algo deu errado". O caminho feliz o backend já
+ * cobre; o formato do Problem Details, não.
  */
 
 const originalFetch = globalThis.fetch;
@@ -101,32 +101,32 @@ describe('Formatacao de valores', () => {
 
 describe('Catalogo', () => {
   it('acha o produto pelo SKU', () => {
-    expect(produtoDe('CAF-500')?.nome).toContain('Cafe');
+    expect(produtoDe('CAF-500')?.nome).toContain('Café');
     expect(produtoDe('NAO-EXISTE')).toBeUndefined();
   });
 
   /**
-   * Os centavos que forcam recusa sao o que permite demonstrar a compensacao
+   * Os centavos que forçam recusa são o que permite demonstrar a compensação
    * sem depender de sorte. Se a tabela mudar sem o adquirente mudar junto, a
-   * demonstracao para de funcionar e ninguem percebe.
+   * demonstração para de funcionar e ninguém percebe.
    */
   it('reconhece os totais que forcam recusa no adquirente simulado', () => {
     expect(desfechoForcado(1013)).toBe('saldo insuficiente');
     expect(desfechoForcado(9966)).toBe('suspeita de fraude');
-    expect(desfechoForcado(2499)).toBe('falha temporaria');
+    expect(desfechoForcado(2499)).toBe('falha temporária');
     expect(desfechoForcado(2490)).toBeUndefined();
   });
 
   /**
-   * O recurso so existe se algum total possivel cair nos restos. Com todos os
-   * precos terminando em zero, nenhum cai, e a tela nunca mostra o aviso. Foi
-   * exatamente o que aconteceu ate 26/08: o codigo estava certo e o catalogo
+   * O recurso só existe se algum total possível cair nos restos. Com todos os
+   * preços terminando em zero, nenhum cai, e a tela nunca mostra o aviso. Foi
+   * exatamente o que aconteceu até 26/08: o código estava certo e o catálogo
    * tornava o caminho inalcancavel.
    */
   it('alcancaOsTresDesfechosForcados com quantidades pequenas', () => {
     const preco = (sku: string) => centavosDe(produtoDe(sku)!.preco);
 
-    expect(desfechoForcado(preco('MAC-500'))).toBe('falha temporaria');
+    expect(desfechoForcado(preco('MAC-500'))).toBe('falha temporária');
     expect(desfechoForcado(preco('SAL-1KG') * 7)).toBe('suspeita de fraude');
     expect(desfechoForcado(preco('MAC-500') + preco('SAL-1KG') * 3)).toBe('saldo insuficiente');
   });

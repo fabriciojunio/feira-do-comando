@@ -9,12 +9,12 @@ const ESTADOS_FINAIS = ['CONFIRMADO', 'CANCELADO'];
  * Acompanhamento de um pedido.
  *
  * <p>A tela consulta a cada segundo enquanto a saga estiver andando e para
- * sozinha quando o pedido chega a um estado final. Consulta periodica nao e o
- * jeito mais elegante, e e o certo aqui: server-sent events exigiriam manter
- * conexao aberta por pedido, e a saga inteira dura poucos segundos.
+ * sozinha quando o pedido chega a um estado final. Consulta periódica não é o
+ * jeito mais elegante, e é o certo aqui: server-sent events exigiriam manter
+ * conexão aberta por pedido, e a saga inteira dura poucos segundos.
  *
- * <p>A cobranca vem de outro servico e pode ainda nao existir. Isso nao e erro:
- * o registro so aparece depois que o evento do pedido chega la, e a tela
+ * <p>A cobrança vem de outro serviço e pode ainda não existir. Isso não é erro:
+ * o registro só aparece depois que o evento do pedido chega lá, e a tela
  * precisa lidar com essa janela em vez de mostrar falha.
  */
 export function DetalheDoPedido() {
@@ -34,13 +34,13 @@ export function DetalheDoPedido() {
       try {
         setCobranca(await cobrancas.consultar(id));
       } catch {
-        // Ainda nao registrada. Esperado nos primeiros instantes.
+        // Ainda não registrada. Esperado nos primeiros instantes.
         setCobranca(null);
       }
 
       return atual;
     } catch (e) {
-      setErro(e instanceof FalhaDaApi ? e.message : 'Nao foi possivel carregar o pedido.');
+      setErro(e instanceof FalhaDaApi ? e.message : 'Não foi possível carregar o pedido.');
       return null;
     }
   }, [id]);
@@ -71,7 +71,7 @@ export function DetalheDoPedido() {
       setPedido(await pedidos.cancelar(id));
       setErro(null);
     } catch (e) {
-      setErro(e instanceof FalhaDaApi ? e.message : 'Nao foi possivel cancelar.');
+      setErro(e instanceof FalhaDaApi ? e.message : 'Não foi possível cancelar.');
     } finally {
       setCancelando(false);
     }

@@ -68,7 +68,7 @@ describe('Meus pedidos', () => {
   });
 
   /**
-   * Numa lista, o motivo do cancelamento e a unica coisa que diferencia
+   * Numa lista, o motivo do cancelamento é a única coisa que diferencia
    * "acabou o estoque" de "seu cartao foi recusado". Sem ele o cliente abre um
    * a um para descobrir.
    */
@@ -93,7 +93,7 @@ describe('Meus pedidos', () => {
 });
 
 /**
- * As duas funcoes vivem no detalhe e sao reusadas aqui. Se a cor do selo
+ * As duas funcoes vivem no detalhe e são reusadas aqui. Se a cor do selo
  * divergir entre a lista e o detalhe, o mesmo pedido aparece verde numa tela e
  * laranja na outra.
  */

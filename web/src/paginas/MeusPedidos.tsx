@@ -13,7 +13,7 @@ export function MeusPedidos() {
       .listar(50)
       .then((pagina) => setLista(pagina.conteudo))
       .catch((e: unknown) =>
-        setErro(e instanceof FalhaDaApi ? e.message : 'Nao foi possivel listar os pedidos.'),
+        setErro(e instanceof FalhaDaApi ? e.message : 'Não foi possível listar os pedidos.'),
       )
       .finally(() => setCarregando(false));
   }, []);
@@ -40,7 +40,7 @@ export function MeusPedidos() {
                   <th>Pedido</th>
                   <th>Itens</th>
                   <th>Total</th>
-                  <th>Situacao</th>
+                  <th>Situação</th>
                   <th />
                 </tr>
               </thead>

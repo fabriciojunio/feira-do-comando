@@ -14,10 +14,10 @@ import { CATALOGO, desfechoForcado } from '@/servicos/catalogo';
 /**
  * A vitrine.
  *
- * Combina o preco, que e local, com o saldo, que vem do servico de estoque.
- * O saldo mostrado e o disponivel, e nao o que existe no galpao: unidade
- * reservada para outro pedido nao esta a venda, e mostrar o total daria a
- * impressao errada de que ainda da para comprar.
+ * Combina o preço, que é local, com o saldo, que vem do serviço de estoque.
+ * O saldo mostrado é o disponível, e não o que existe no galpão: unidade
+ * reservada para outro pedido não está à venda, e mostrar o total daria a
+ * impressão errada de que ainda dá para comprar.
  */
 export function Vitrine() {
   const navegar = useNavigate();
@@ -40,7 +40,7 @@ export function Vitrine() {
       setErro(
         e instanceof FalhaDaApi
           ? e.message
-          : 'Nao foi possivel falar com o servico de estoque. Ele esta no ar?',
+          : 'Não foi possível falar com o serviço de estoque. Ele está no ar?',
       );
     } finally {
       setCarregando(false);
@@ -81,14 +81,14 @@ export function Vitrine() {
     setEnviando(true);
     setErro(null);
     try {
-      // A chave e gerada uma vez por tentativa de compra. Se a rede cair e o
-      // usuario clicar de novo, o servidor devolve o mesmo pedido em vez de
+      // A chave é gerada uma vez por tentativa de compra. Se a rede cair e o
+      // usuário clicar de novo, o servidor devolve o mesmo pedido em vez de
       // criar outro.
       const chave = crypto.randomUUID();
       const pedido = await pedidos.criar(linhas, chave);
       navegar(`/pedidos/${pedido.id}`);
     } catch (e) {
-      setErro(e instanceof FalhaDaApi ? e.message : 'Nao foi possivel fechar o pedido.');
+      setErro(e instanceof FalhaDaApi ? e.message : 'Não foi possível fechar o pedido.');
       setEnviando(false);
     }
   }
@@ -99,8 +99,8 @@ export function Vitrine() {
         <div className="envolucro">
           <h1>O que tem hoje na feira</h1>
           <p>
-            O saldo abaixo vem do servico de estoque em tempo real. Ao fechar o pedido, voce
-            acompanha passo a passo o que os tres servicos combinam entre si.
+            O saldo abaixo vem do serviço de estoque em tempo real. Ao fechar o pedido, você
+            acompanha passo a passo o que os três serviços combinam entre si.
           </p>
         </div>
       </section>
@@ -112,8 +112,8 @@ export function Vitrine() {
 
           {!carregando && Object.keys(saldos).length === 0 && !erro && (
             <div className="aviso">
-              O estoque esta vazio. Abra a aba <strong>Operacao</strong> e cadastre saldo para
-              comecar.
+              O estoque está vazio. Abra a aba <strong>Operação</strong> e cadastre saldo para
+              começar.
             </div>
           )}
 
@@ -132,13 +132,13 @@ export function Vitrine() {
                   <span className="preco">{emReais(centavosDe(produto.preco))}</span>
 
                   <div>
-                    {!naVitrine && <span className="selo esgotado">nao cadastrado</span>}
+                    {!naVitrine && <span className="selo esgotado">não cadastrado</span>}
                     {naVitrine && disponivel === 0 && <span className="selo ruim">esgotado</span>}
                     {naVitrine && disponivel > 0 && disponivel <= 3 && (
                       <span className="selo andamento">restam {disponivel}</span>
                     )}
                     {naVitrine && disponivel > 3 && (
-                      <span className="selo ok">{disponivel} disponiveis</span>
+                      <span className="selo ok">{disponivel} disponíveis</span>
                     )}
                     {saldo !== undefined && saldo.reservado > 0 && (
                       <span className="apagado" style={{ marginLeft: 8 }}>
@@ -200,7 +200,7 @@ export function Vitrine() {
                 <div className="aviso" style={{ marginTop: 16 }}>
                   Este total termina em <strong>{totalEmCentavos % 100}</strong> centavos, o que
                   faz o adquirente simulado recusar por <strong>{forcado}</strong>. Use isso para
-                  ver a compensacao acontecer.
+                  ver a compensação acontecer.
                 </div>
               )}
 

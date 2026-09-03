@@ -8,10 +8,10 @@ import { cobrancas, pedidos, FalhaDaApi, type Cobranca, type Pedido } from '@/se
 /**
  * Acompanhamento do pedido.
  *
- * O que precisa de teste e a consulta periodica: ela tem que continuar
- * enquanto a saga anda e parar sozinha no estado final. Se nao parar, cada
- * pedido ja terminado deixa um temporizador batendo nos tres servicos para
- * sempre, e isso nao aparece em nenhuma tela.
+ * O que precisa de teste é a consulta periódica: ela tem que continuar
+ * enquanto a saga anda e parar sozinha no estado final. Se não parar, cada
+ * pedido já terminado deixa um temporizador batendo nos três serviços para
+ * sempre, e isso não aparece em nenhuma tela.
  */
 
 vi.mock('@/servicos/api', async () => {
@@ -71,8 +71,8 @@ describe('Detalhe do pedido', () => {
   });
 
   /**
-   * A cobranca vive em outro servico e so nasce depois que o evento do pedido
-   * chega la. Nos primeiros instantes o 404 e o comportamento correto, e nao
+   * A cobrança vive em outro serviço e só nasce depois que o evento do pedido
+   * chega lá. Nos primeiros instantes o 404 é o comportamento correto, e não
    * pode virar tela de erro.
    */
   it('nao trata cobranca ainda inexistente como falha', async () => {
@@ -81,7 +81,7 @@ describe('Detalhe do pedido', () => {
     montar();
 
     expect(await screen.findByText('Recebemos seu pedido')).toBeInTheDocument();
-    expect(screen.queryByText(/Nao foi possivel/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Não foi possível/)).not.toBeInTheDocument();
   });
 
   it('para de consultar quando o pedido chega a um estado final', async () => {
@@ -118,9 +118,9 @@ describe('Detalhe do pedido', () => {
   });
 
   /**
-   * Cancelar um pedido ja confirmado e recusado pelo servidor com 409. A tela
-   * precisa mostrar o motivo que veio no Problem Details, e nao um texto
-   * generico, porque e a unica pista que o cliente tem.
+   * Cancelar um pedido já confirmado e recusado pelo servidor com 409. A tela
+   * precisa mostrar o motivo que veio no Problem Details, e não um texto
+   * genérico, porque é a única pista que o cliente tem.
    */
   it('mostra o motivo quando o servidor recusa o cancelamento', async () => {
     vi.mocked(pedidos.consultar).mockResolvedValue(pedidoCom({ status: 'ESTOQUE_RESERVADO' }));
