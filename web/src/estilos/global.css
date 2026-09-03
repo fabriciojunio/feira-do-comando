@@ -74,9 +74,9 @@ select {
   padding: 0 20px;
 }
 
-/* ---------- Faixa da demonstracao ---------- */
+/* ---------- Faixa da demonstração ---------- */
 
-/* Milho, que e o tom de aviso da paleta. Nao usa vermelho: nao ha nada errado
+/* Milho, que é o tom de aviso da paleta. Não usa vermelho: não há nada errado
    acontecendo, e vermelho faria parecer que sim. */
 .faixa-demonstracao {
   background: var(--milho);
@@ -100,7 +100,7 @@ select {
   text-underline-offset: 2px;
 }
 
-/* ---------- Cabecalho ---------- */
+/* ---------- Cabeçalho ---------- */
 
 .cabecalho {
   background: var(--papel);
@@ -126,7 +126,7 @@ select {
   gap: 10px;
 }
 
-/* As tres listras sao a barraca da feira vista de frente. */
+/* As três listras são a barraca da feira vista de frente. */
 .toldo {
   display: inline-flex;
   width: 26px;
@@ -161,7 +161,7 @@ select {
   font-weight: 600;
 }
 
-/* ---------- Botoes ---------- */
+/* ---------- Botões ---------- */
 
 .botao {
   display: inline-flex;
@@ -264,7 +264,7 @@ select {
   line-height: 1.3;
 }
 
-/* Etiqueta de preco: o angulo leve imita a placa escrita a mao do caixote. */
+/* Etiqueta de preço: o ângulo leve imita a placa escrita à mão do caixote. */
 .preco {
   font-size: 24px;
   font-weight: 800;
@@ -346,7 +346,7 @@ select {
   padding-bottom: 20px;
 }
 
-/* A linha que liga um passo ao proximo. O ultimo nao tem. */
+/* A linha que liga um passo ao próximo. O último não tem. */
 .passo:not(:last-child)::before {
   content: '';
   position: absolute;

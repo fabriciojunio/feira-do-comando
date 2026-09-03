@@ -69,7 +69,7 @@ describe('Meus pedidos', () => {
 
   /**
    * Numa lista, o motivo do cancelamento é a única coisa que diferencia
-   * "acabou o estoque" de "seu cartao foi recusado". Sem ele o cliente abre um
+   * "acabou o estoque" de "seu cartão foi recusado". Sem ele o cliente abre um
    * a um para descobrir.
    */
   it('mostra o motivo do cancelamento na propria linha', async () => {
