@@ -113,7 +113,7 @@ public class ReservarEstoque {
     private static Map<String, Integer> agrupar(List<ItemDoPedido> itens) {
         var agrupado = new java.util.TreeMap<String, Integer>();
         for (ItemDoPedido item : itens) {
-            agrupado.merge(item.sku(), item.quantidade(), Integer::sum);
+            agrupado.merge(item.sku(), item.quantidade(), Math::addExact);
         }
         return agrupado;
     }

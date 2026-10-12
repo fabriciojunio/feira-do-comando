@@ -123,6 +123,9 @@ public class ItemDeEstoque {
 
     public void repor(int quantidade, Instant agora) {
         exigirQuantidadePositiva(quantidade);
+        if ((long) disponivel + reservado + quantidade > Integer.MAX_VALUE) {
+            throw new IllegalArgumentException("reposicao excede a capacidade do saldo");
+        }
         this.disponivel += quantidade;
         this.atualizadoEm = agora;
     }

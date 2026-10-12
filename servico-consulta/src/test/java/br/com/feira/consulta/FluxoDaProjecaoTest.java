@@ -1,6 +1,9 @@
 package br.com.feira.consulta;
 
 import br.com.feira.consulta.projecao.PedidoLidoRepository;
+import br.com.feira.consulta.projecao.EventosPendentes;
+import br.com.feira.consulta.projecao.ConsumidorDeEventos;
+import br.com.feira.consulta.projecao.EventoPendente;
 import br.com.feira.contratos.Dinheiro;
 import br.com.feira.contratos.Evento;
 import br.com.feira.contratos.ItemDoPedido;
@@ -65,12 +68,19 @@ class FluxoDaProjecaoTest {
     @Autowired
     private PedidoLidoRepository repositorio;
 
+    @Autowired
+    private EventosPendentes pendentes;
+
+    @Autowired
+    private ConsumidorDeEventos consumidor;
+
     private UUID pedidoId;
     private Instant agora;
 
     @BeforeEach
     void limpar() {
         repositorio.deleteAll();
+        pendentes.deleteAll();
         pedidoId = UUID.randomUUID();
         agora = Instant.now();
     }
@@ -132,6 +142,43 @@ class FluxoDaProjecaoTest {
                 .andExpect(jsonPath("$.situacaoDaCobranca").value("APROVADA"))
                 .andExpect(jsonPath("$.referenciaExterna").value("tx-abc123"))
                 .andExpect(jsonPath("$.linhaDoTempo.length()").value(4));
+    }
+
+    @Test
+    @DisplayName("eventos de outros topicos antes da criacao sobrevivem e sao aplicados uma vez")
+    void reprocessaEventoAntesDoPedido() {
+        var reserva = new EstoqueReservado(UUID.randomUUID(), pedidoId, agora.plusSeconds(1),
+                Evento.VERSAO_ATUAL, UUID.randomUUID());
+        var pagamento = new PagamentoAprovado(UUID.randomUUID(), pedidoId, agora.plusSeconds(2),
+                Evento.VERSAO_ATUAL, UUID.randomUUID(), "tx-antes", new Dinheiro(4980));
+        publicar(Topicos.ESTOQUE, reserva);
+        publicar(Topicos.PAGAMENTOS, pagamento);
+        await().atMost(ESPERA).untilAsserted(() ->
+                assertThat(pendentes.findByPedidoIdOrderByOcorridoEmAsc(pedidoId)).hasSize(2));
+
+        publicar(Topicos.PEDIDOS, new PedidoCriado(
+                UUID.randomUUID(), pedidoId, agora, Evento.VERSAO_ATUAL, "cliente-1",
+                List.of(new ItemDoPedido("CAF-500", "Cafe", 2, new Dinheiro(2490))),
+                new Dinheiro(4980)));
+        publicar(Topicos.PEDIDOS, new PedidoConfirmado(
+                UUID.randomUUID(), pedidoId, agora.plusSeconds(3),
+                Evento.VERSAO_ATUAL, new Dinheiro(4980)));
+
+        await().atMost(ESPERA).untilAsserted(() -> {
+            assertThat(repositorio.findById(pedidoId)).hasValueSatisfying(p -> {
+                assertThat(p.getStatus()).isEqualTo("CONFIRMADO");
+                assertThat(p.getSituacaoDaCobranca()).isEqualTo("APROVADA");
+                assertThat(p.getLinhaDoTempo()).hasSize(4);
+            });
+            assertThat(pendentes.findByPedidoIdOrderByOcorridoEmAsc(pedidoId)).isEmpty();
+        });
+
+        // Simula uma queda entre a aplicacao e a remocao do pendente.
+        pendentes.save(new EventoPendente(reserva.id(), pedidoId, reserva.ocorridoEm(),
+                mapeador.paraJson(reserva)));
+        consumidor.reprocessarPendentes();
+        assertThat(repositorio.findById(pedidoId).orElseThrow().getLinhaDoTempo()).hasSize(4);
+        assertThat(pendentes.findByPedidoIdOrderByOcorridoEmAsc(pedidoId)).isEmpty();
     }
 
     /**

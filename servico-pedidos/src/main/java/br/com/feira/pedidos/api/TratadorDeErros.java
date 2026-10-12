@@ -80,7 +80,7 @@ public class TratadorDeErros {
                 "Falta o cabecalho " + e.getHeaderName(), "CABECALHO_OBRIGATORIO", requisicao);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class})
+    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class, ArithmeticException.class})
     public ProblemDetail requisicaoInvalida(Exception e, HttpServletRequest requisicao) {
         return problema(HttpStatus.BAD_REQUEST, "requisicao-invalida",
                 "Nao foi possivel ler a requisicao", e.getMessage(), "REQUISICAO_INVALIDA",
