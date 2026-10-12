@@ -28,9 +28,10 @@ import java.util.Optional;
  * reclamar.
  *
  * <h2>Ordem dos eventos</h2>
- * A chave de particao e o id do pedido, entao os eventos de um mesmo pedido
- * chegam em ordem. O que nao esta garantido e a entrega unica, e por isso todo
- * caminho passa por {@link PedidoLido#registrar}, que ignora id repetido.
+ * A chave de particao preserva ordem dentro de cada topico, mas nao entre os
+ * tres topicos. Por isso estados finais nao podem regredir quando chega um
+ * evento de estoque atrasado. A entrega tambem pode se repetir; cada caminho
+ * passa por {@link PedidoLido#registrar}, que ignora ID repetido.
  *
  * <p>Falta de ordem entre pedidos diferentes nao importa: cada documento e
  * independente.
@@ -50,10 +51,8 @@ public class Projetor {
      * Aplica o evento e devolve o documento resultante, quando houver.
      *
      * <p>Devolve vazio quando o evento chegou antes do {@link PedidoCriado}
-     * daquele pedido. Isso e possivel em reprocessamento a partir do inicio do
-     * topico, e a resposta certa e esperar: o evento vai voltar quando o
-     * consumidor reprocessar em ordem, e inventar um documento sem os itens
-     * produziria uma tela pior do que nenhuma.
+     * daquele pedido. O consumidor guarda o evento para reaplicar apos a
+     * criacao; inventar um documento sem itens produziria uma tela incompleta.
      */
     public Optional<PedidoLido> aplicar(Evento evento) {
         if (evento instanceof PedidoCriado criado) {
@@ -104,15 +103,21 @@ public class Projetor {
                     throw new IllegalStateException("PedidoCriado nao passa por este caminho");
 
             case EstoqueReservado e -> {
-                p.setStatus("ESTOQUE_RESERVADO");
+                // Pedidos e estoque usam topicos diferentes. A confirmacao ou
+                // o cancelamento pode chegar antes desta reserva ao leitor.
+                if (!"CONFIRMADO".equals(p.getStatus()) && !"CANCELADO".equals(p.getStatus())) {
+                    p.setStatus("ESTOQUE_RESERVADO");
+                }
                 p.registrar(e.id(), "Estoque separado",
                         "Reserva " + e.reservaId(), e.ocorridoEm());
             }
 
             case EstoqueRecusado e -> {
-                p.setStatus("CANCELADO");
-                p.setMotivoDoCancelamento("SEM_ESTOQUE");
-                p.setDetalheDoCancelamento(e.motivo());
+                if (!"CONFIRMADO".equals(p.getStatus()) && !"CANCELADO".equals(p.getStatus())) {
+                    p.setStatus("CANCELADO");
+                    p.setMotivoDoCancelamento("SEM_ESTOQUE");
+                    p.setDetalheDoCancelamento(e.motivo());
+                }
                 p.registrar(e.id(), "Sem estoque", e.motivo(), e.ocorridoEm());
             }
 

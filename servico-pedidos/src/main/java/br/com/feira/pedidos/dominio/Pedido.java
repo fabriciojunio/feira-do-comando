@@ -150,6 +150,13 @@ public class Pedido {
         if (clienteId == null || clienteId.isBlank()) {
             throw new IllegalArgumentException("pedido precisa de um cliente");
         }
+        var quantidades = new java.util.HashMap<String, Long>();
+        for (var item : itens) {
+            long total = quantidades.merge(item.sku(), (long) item.quantidade(), Long::sum);
+            if (total > Integer.MAX_VALUE) {
+                throw new IllegalArgumentException("quantidade total do SKU excede o limite");
+            }
+        }
         return new Pedido(id, clienteId, itens.stream().map(ItemPedido::de).toList(), agora);
     }
 

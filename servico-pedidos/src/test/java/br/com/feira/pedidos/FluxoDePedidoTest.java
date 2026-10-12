@@ -187,6 +187,28 @@ class FluxoDePedidoTest {
     class NaCriacao {
 
         @Test
+        @DisplayName("quantidade repetida de SKU acima de int não grava pedido nem evento")
+        void quantidadeTotalNaoTransborda() throws Exception {
+            String item = "{\"sku\":\"CAFE\",\"descricao\":\"Café\",\"quantidade\":2147483647,\"precoUnitario\":\"0.01\"}";
+            mvc.perform(post("/api/v1/pedidos").header("X-Cliente-Id", "cliente-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"itens\":[" + item + "," + item + "]}"))
+                    .andExpect(status().isBadRequest());
+            assertThat(pedidos.count()).isZero();
+            assertThat(outbox.count()).isZero();
+        }
+
+        @Test
+        @DisplayName("preço fora da faixa de centavos responde erro de entrada")
+        void precoNaoTransborda() throws Exception {
+            mvc.perform(post("/api/v1/pedidos").header("X-Cliente-Id", "cliente-1")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"itens\":[{\"sku\":\"CAFE\",\"descricao\":\"Café\",\"quantidade\":1,\"precoUnitario\":\"92233720368547758.08\"}]}"))
+                    .andExpect(status().isBadRequest());
+            assertThat(pedidos.count()).isZero();
+        }
+
+        @Test
         @DisplayName("cria o pedido, calcula o total e devolve o Location")
         void criaPedido() throws Exception {
             mvc.perform(post("/api/v1/pedidos")

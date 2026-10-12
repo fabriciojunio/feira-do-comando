@@ -27,7 +27,7 @@ public record Dinheiro(long centavos) implements Comparable<Dinheiro> {
     }
 
     public Dinheiro mais(Dinheiro outro) {
-        return new Dinheiro(centavos + outro.centavos);
+        return new Dinheiro(Math.addExact(centavos, outro.centavos));
     }
 
     public Dinheiro vezes(int quantidade) {

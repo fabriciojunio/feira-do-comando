@@ -238,6 +238,26 @@ class ProjecaoDoPedidoTest {
 
             assertThat(lido().getStatus()).isEqualTo("ESTOQUE_RESERVADO");
         }
+
+        @Test
+        @DisplayName("reserva atrasada nao reabre pedido confirmado ou cancelado")
+        void reservaAtrasada() {
+            projetor.aplicar(criado());
+            projetor.aplicar(confirmado());
+            projetor.aplicar(reservado());
+            assertThat(lido().getStatus()).isEqualTo("CONFIRMADO");
+            assertThat(lido().getLinhaDoTempo()).hasSize(3);
+
+            var outroPedido = UUID.randomUUID();
+            pedidoId = outroPedido;
+            projetor.aplicar(criado());
+            projetor.aplicar(new PedidoCancelado(
+                    UUID.randomUUID(), pedidoId, agora.plusSeconds(3), Evento.VERSAO_ATUAL,
+                    PedidoCancelado.Motivo.PEDIDO_DO_CLIENTE, null));
+            projetor.aplicar(reservado());
+            assertThat(lido().getStatus()).isEqualTo("CANCELADO");
+            assertThat(lido().getLinhaDoTempo()).hasSize(3);
+        }
     }
 
     @Nested

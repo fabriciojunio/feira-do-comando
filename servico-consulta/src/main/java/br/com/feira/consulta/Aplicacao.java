@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerA
 import org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration;
 import org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * Servico de consulta.
@@ -46,6 +47,7 @@ import org.springframework.context.annotation.ComponentScan;
         // não tem banco relacional, então outbox e inbox não fazem sentido
         // aqui e arrastariam JPA junto.
         "br.com.feira.plataforma.observabilidade"})
+@EnableScheduling
 public class Aplicacao {
 
     public static void main(String[] args) {
