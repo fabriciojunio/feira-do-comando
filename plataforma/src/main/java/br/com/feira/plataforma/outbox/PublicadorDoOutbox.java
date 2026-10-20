@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Le o outbox e publica no Kafka.
@@ -50,6 +51,7 @@ public class PublicadorDoOutbox {
     private final Clock relogio;
     private final RastroDaMensagem rastro;
     private final Tracer tracer;
+    private final AtomicLong quantidadePendente = new AtomicLong();
 
     public PublicadorDoOutbox(OutboxRepository repositorio, KafkaTemplate<String, String> kafka,
                               MeterRegistry metricas, Clock relogio,
@@ -60,6 +62,7 @@ public class PublicadorDoOutbox {
         this.relogio = relogio;
         this.rastro = rastro;
         this.tracer = tracer;
+        metricas.gauge("feira.outbox.pendentes", quantidadePendente);
     }
 
     @Scheduled(fixedDelayString = "${feira.outbox.intervalo-ms:500}")
@@ -125,7 +128,7 @@ public class PublicadorDoOutbox {
      */
     @Scheduled(fixedDelayString = "${feira.outbox.intervalo-metrica-ms:15000}")
     public void medirPendentes() {
-        metricas.gauge("feira.outbox.pendentes", repositorio.countByPublicadaEmIsNull());
+        quantidadePendente.set(repositorio.countByPublicadaEmIsNull());
     }
 
     @Scheduled(cron = "${feira.outbox.cron-expurgo:0 30 3 * * *}", zone = "America/Sao_Paulo")

@@ -224,6 +224,16 @@ class ItemDeEstoqueTest {
             assertThat(item.reservado()).isEqualTo(5);
             assertThat(item.emMaos()).isEqualTo(15);
         }
+
+        @Test
+        void excessoDeReposicaoNaoCorrompeSaldoNemReserva() {
+            var item = comSaldo(Integer.MAX_VALUE);
+            item.reservar(5, AGORA);
+            assertThatThrownBy(() -> item.repor(1, AGORA)).isInstanceOf(IllegalArgumentException.class);
+            assertThat(item.disponivel()).isEqualTo(Integer.MAX_VALUE - 5);
+            assertThat(item.reservado()).isEqualTo(5);
+            assertThat(item.emMaos()).isEqualTo(Integer.MAX_VALUE);
+        }
     }
 
     @Nested
