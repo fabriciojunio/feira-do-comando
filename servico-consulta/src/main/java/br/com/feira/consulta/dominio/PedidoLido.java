@@ -1,6 +1,7 @@
 package br.com.feira.consulta.dominio;
 
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Version;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
@@ -81,13 +82,11 @@ public class PedidoLido {
     private List<UUID> eventosAplicados = new ArrayList<>();
 
     /**
-     * Numero de eventos ja aplicados, usado como versao otimista.
-     *
-     * <p>Duas particoes entregando eventos do mesmo pedido em paralelo nao
-     * acontece, porque a chave de particao e o id do pedido. Mas uma
-     * reentrega durante rebalanceamento acontece, e a versao e o que permite
-     * detectar escrita concorrente em vez de sobrescrever em silencio.
+     * Versao otimista do Mongo. Topicos distintos podem entregar eventos do
+     * mesmo pedido em paralelo; a gravacao concorrente precisa falhar e ser
+     * repetida, em vez de apagar um dos eventos.
      */
+    @Version
     private long versao;
 
     protected PedidoLido() {
@@ -119,7 +118,6 @@ public class PedidoLido {
         eventosAplicados.add(idDoEvento);
         linhaDoTempo.add(new Marco(oQue, detalhe, quando));
         atualizadoEm = quando;
-        versao++;
         return true;
     }
 
