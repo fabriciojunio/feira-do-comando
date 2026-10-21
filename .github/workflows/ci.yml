@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["produção", "homologação"]
   pull_request:
-    branches: [main]
+    branches: ["produção", "homologação"]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -193,7 +193,7 @@ jobs:
     # So no push para a branch principal. Levanta o sistema inteiro e leva uns
     # minutos; rodar em cada pull request atrasaria o retorno sem pegar nada
     # que os testes de vazao do build ja nao peguem.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/produção'
     steps:
       - uses: actions/checkout@v5
 
