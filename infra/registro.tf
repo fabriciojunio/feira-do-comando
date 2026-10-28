@@ -5,6 +5,7 @@
 # build antigo se acumula rapido num pipeline que publica a cada push.
 
 resource "aws_ecr_repository" "servico" {
+  #checkov:skip=CKV_AWS_136: imagem ja e cifrada em repouso com AES-256 pela AWS; chave KMS propria cobra por mes e por chamada
   for_each = toset(concat(var.servicos, ["consulta"]))
 
   name                 = "feira/${each.key}"
