@@ -1,0 +1,95 @@
+name: Segurança
+
+on:
+  push:
+    branches: ["produção", "homologação"]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  segredos:
+    name: Varredura de segredos (gitleaks)
+    runs-on: ubuntu-latest
+    # Em pull request a action lista os commits do PR pela API; sem esta
+    # leitura ela recebe 403 e reprova todo PR, inclusive os do Dependabot.
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencias:
+    name: Vulnerabilidades em dependências (osv-scanner)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+      # Lendo os pom.xml direto, o OSV não resolve os módulos internos e desiste
+      # da árvore inteira: em 28/10/2026 ele dizia "0 packages" e passava verde
+      # com quinze bibliotecas vulneráveis. O SBOM sai do próprio Maven, com as
+      # transitivas que vão de fato para o jar.
+      - name: Gerar o SBOM do back-end
+        run: mvn -B -q org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeAggregateBom -DoutputFormat=json -DoutputName=bom.cdx
+      - uses: google/osv-scanner-action/osv-scanner-action@b1d267aea5211fa648d9d442fa64b90dbdcbdd36 # v2.7.0
+        with:
+          scan-args: |-
+            --config=osv-scanner.toml
+            -L target/bom.cdx.json
+            -L web/package-lock.json
+
+  codeql:
+    name: Análise estática (CodeQL, ${{ matrix.linguagem }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        linguagem: [java-kotlin, javascript-typescript]
+    permissions:
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.linguagem }}
+          # Java sem compilar: o CodeQL lê o código-fonte direto, e o CI já
+          # prova que ele compila. Evita repetir aqui os minutos do Maven.
+          build-mode: none
+          queries: security-extended
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: ${{ matrix.linguagem }}
+          output: sarif-results
+      # Falha em qualquer achado que não esteja no registro de aceites, e também em aceite
+      # vencido: um risco aceito volta a barrar quando chega a data de revisão.
+      - name: Falha se o CodeQL encontrou algum problema não aceito
+        run: |
+          # Qualquer erro aqui (jq ausente, SARIF inválido) reprova: a barreira nunca passa por falha.
+          set -euo pipefail
+          today=$(date -u +%F)
+          expired=$(jq -r --arg today "$today" '.[] | select(.review < $today) | "\(.rule) em \(.path) venceu em \(.review)"' .github/codeql-accepted.json)
+          if [ -n "$expired" ]; then echo "Aceite vencido, reavaliar:"; echo "$expired"; exit 1; fi
+          jq -r '.runs[].results[] | "\(.ruleId)|\(.locations[0].physicalLocation.artifactLocation.uri)|\(.locations[0].physicalLocation.region.startLine)"' sarif-results/*.sarif > findings.txt
+          jq -r '.[] | "\(.rule)|\(.path)"' .github/codeql-accepted.json > accepted.txt
+          open=$(while IFS='|' read -r rule path line; do grep -qxF "$rule|$path" accepted.txt || echo "$rule: $path:$line"; done < findings.txt)
+          echo "CodeQL: $(wc -l < findings.txt) resultado(s), $(echo -n "$open" | grep -c . || true) sem aceite"
+          if [ -n "$open" ]; then echo "$open"; exit 1; fi

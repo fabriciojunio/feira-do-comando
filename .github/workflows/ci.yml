@@ -10,15 +10,21 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Nenhum passo daqui escreve no repositório.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build e testes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Instalar Java 21
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: '21'
@@ -33,7 +39,7 @@ jobs:
 
       - name: Guardar relatorios
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: relatorios-de-teste
           path: '**/target/surefire-reports/'
@@ -46,9 +52,11 @@ jobs:
       run:
         working-directory: web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
           cache: npm
@@ -66,7 +74,9 @@ jobs:
       matrix:
         modulo: [servico-pedidos, servico-estoque, servico-pagamentos, servico-consulta]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Construir ${{ matrix.modulo }}
         run: docker build --build-arg MODULO=${{ matrix.modulo }} -t feira/${{ matrix.modulo }}:ci .
@@ -75,7 +85,9 @@ jobs:
     name: Manifestos Kubernetes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Sem cluster nenhum: o kubeconform confere os manifestos contra os
       # esquemas da API do Kubernetes. Pega apiVersion errada, campo com nome
@@ -85,6 +97,8 @@ jobs:
       - name: Instalar kubeconform
         run: |
           curl -sSL -o kubeconform.tar.gz             https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz
+          # Binário baixado da internet só roda se for o que o autor publicou.
+          echo "95f14e87aa28c09d5941f11bd024c1d02fdc0303ccaa23f61cef67bc92619d73  kubeconform.tar.gz" | sha256sum -c -
           tar xzf kubeconform.tar.gz kubeconform
           sudo mv kubeconform /usr/local/bin/
 
@@ -97,36 +111,31 @@ jobs:
         run: |
           kubeconform -strict -summary             -kubernetes-version 1.30.0             -schema-location default             -ignore-filename-pattern 'kustomization.yaml'             k8s/*.yaml
 
-  seguranca:
-    name: Seguranca
+  iac:
+    name: Infraestrutura como código (Checkov)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      # Sem chave da NVD a consulta e limitada e cai com frequencia por tempo
-      # esgotado, o que quebraria o build por motivo que nao e nosso. Roda para
-      # o relatorio existir, sem travar a entrega. Cadastre NVD_API_KEY e
-      # troque para false quando quiser que vulnerabilidade alta pare o build.
-      - name: Dependencias
-        continue-on-error: true
-        run: >
-          mvn -B org.owasp:dependency-check-maven:check
-          -DfailBuildOnCVSS=7
-          -DnvdApiKey=${{ secrets.NVD_API_KEY }}
+          persist-credentials: false
+      # Terraform, manifestos e Dockerfile. Aceite tem que estar escrito no
+      # próprio arquivo, com o motivo (#checkov:skip ou anotação
+      # checkov.io/skip); qualquer achado sem aceite reprova.
+      - name: Rodar o Checkov
+        run: |
+          pipx run --spec checkov==3.3.29 checkov --quiet --compact             -d infra --framework terraform
+          pipx run --spec checkov==3.3.29 checkov --quiet --compact             -d k8s --framework kubernetes
+          pipx run --spec checkov==3.3.29 checkov --quiet --compact             -f Dockerfile --framework dockerfile
 
   terraform:
     name: Infraestrutura
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
-      - uses: hashicorp/setup-terraform@v3
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.9.8
 
@@ -147,13 +156,15 @@ jobs:
     name: Kubernetes num cluster de verdade
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Um cluster kind de verdade, e nao so validacao de esquema. A diferenca
       # importa: kubeconform diz que o YAML esta bem formado, e este job diz
       # que o Kubernetes aceita o manifesto e agenda os pods. Sonda mal escrita
       # e limite de recurso impossivel so aparecem aqui.
-      - uses: helm/kind-action@v1
+      - uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
         with:
           cluster_name: feira
           wait: 120s
@@ -195,7 +206,9 @@ jobs:
     # que os testes de vazao do build ja nao peguem.
     if: github.event_name == 'push' && github.ref == 'refs/heads/produção'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Subir o sistema
         run: docker compose up -d --wait --wait-timeout 300
@@ -217,7 +230,7 @@ jobs:
 
       - name: Guardar o resultado
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: resultado-da-carga
           path: carga/resultado.json
