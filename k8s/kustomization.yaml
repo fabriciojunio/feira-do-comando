@@ -11,6 +11,7 @@ resources:
   - bancos.yaml
   - mongo.yaml
   - servicos.yaml
+  - networkpolicy.yaml
 
 commonLabels:
   app.kubernetes.io/part-of: feira
