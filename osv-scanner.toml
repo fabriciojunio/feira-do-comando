@@ -1,0 +1,16 @@
+# Falhas aceitas com prazo. Vencido o ignoreUntil, o OSV volta a reprovar o CI.
+#
+# As duas do Spring Framework só têm correção no 7.0.9, que exige o Spring
+# Boot 4. Nenhuma se aplica a este projeto: a API é só @RestController, não
+# renderiza view, não usa XsltView e não usa Server-Sent Events. A correção de
+# verdade é a migração para o Boot 4, que fica para a próxima revisão.
+
+[[IgnoredVulns]]
+id = "GHSA-j9f9-w8pj-32f8"
+ignoreUntil = 2027-01-28
+reason = "CVE-2026-47890: exige SSE com fragmentos de view; o projeto não usa SSE nem view."
+
+[[IgnoredVulns]]
+id = "GHSA-pc63-qcmh-9cmg"
+ignoreUntil = 2027-01-28
+reason = "CVE-2026-47884: exige XsltView; o projeto não renderiza view nenhuma."
