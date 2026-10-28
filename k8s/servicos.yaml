@@ -26,6 +26,11 @@ kind: Deployment
 metadata:
   name: servico-pedidos
   namespace: feira
+  annotations:
+    checkov.io/skip1: "CKV_K8S_14=tag latest de proposito: arquivo de leitura; o deploy troca pela tag do commit (ver comentario no topo)"
+    checkov.io/skip2: "CKV_K8S_43=mesmo motivo: o digest so existe depois que o pipeline de deploy publica a imagem"
+    checkov.io/skip3: "CKV_K8S_11=limite de CPU estrangula a partida da JVM; requests de CPU e limite de memoria estao definidos"
+    checkov.io/skip4: "CKV_K8S_35=o Spring le a credencial do banco por variavel de ambiente; arquivo exigiria configtree e mudanca no servico"
   labels:
     app: servico-pedidos
 spec:
@@ -42,9 +47,14 @@ spec:
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8081"
     spec:
+      # Nenhum servico fala com a API do Kubernetes; sem o token montado, um
+      # contêiner comprometido nao tem credencial do cluster para usar.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: ghcr.io/fabriciojunio/feira-servico-pedidos:latest
@@ -130,6 +140,11 @@ kind: Deployment
 metadata:
   name: servico-estoque
   namespace: feira
+  annotations:
+    checkov.io/skip1: "CKV_K8S_14=tag latest de proposito: arquivo de leitura; o deploy troca pela tag do commit (ver comentario no topo)"
+    checkov.io/skip2: "CKV_K8S_43=mesmo motivo: o digest so existe depois que o pipeline de deploy publica a imagem"
+    checkov.io/skip3: "CKV_K8S_11=limite de CPU estrangula a partida da JVM; requests de CPU e limite de memoria estao definidos"
+    checkov.io/skip4: "CKV_K8S_35=o Spring le a credencial do banco por variavel de ambiente; arquivo exigiria configtree e mudanca no servico"
   labels:
     app: servico-estoque
 spec:
@@ -146,9 +161,14 @@ spec:
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8082"
     spec:
+      # Nenhum servico fala com a API do Kubernetes; sem o token montado, um
+      # contêiner comprometido nao tem credencial do cluster para usar.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: ghcr.io/fabriciojunio/feira-servico-estoque:latest
@@ -234,6 +254,11 @@ kind: Deployment
 metadata:
   name: servico-pagamentos
   namespace: feira
+  annotations:
+    checkov.io/skip1: "CKV_K8S_14=tag latest de proposito: arquivo de leitura; o deploy troca pela tag do commit (ver comentario no topo)"
+    checkov.io/skip2: "CKV_K8S_43=mesmo motivo: o digest so existe depois que o pipeline de deploy publica a imagem"
+    checkov.io/skip3: "CKV_K8S_11=limite de CPU estrangula a partida da JVM; requests de CPU e limite de memoria estao definidos"
+    checkov.io/skip4: "CKV_K8S_35=o Spring le a credencial do banco por variavel de ambiente; arquivo exigiria configtree e mudanca no servico"
   labels:
     app: servico-pagamentos
 spec:
@@ -250,9 +275,14 @@ spec:
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8083"
     spec:
+      # Nenhum servico fala com a API do Kubernetes; sem o token montado, um
+      # contêiner comprometido nao tem credencial do cluster para usar.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: ghcr.io/fabriciojunio/feira-servico-pagamentos:latest
@@ -338,6 +368,11 @@ kind: Deployment
 metadata:
   name: servico-consulta
   namespace: feira
+  annotations:
+    checkov.io/skip1: "CKV_K8S_14=tag latest de proposito: arquivo de leitura; o deploy troca pela tag do commit (ver comentario no topo)"
+    checkov.io/skip2: "CKV_K8S_43=mesmo motivo: o digest so existe depois que o pipeline de deploy publica a imagem"
+    checkov.io/skip3: "CKV_K8S_11=limite de CPU estrangula a partida da JVM; requests de CPU e limite de memoria estao definidos"
+    checkov.io/skip4: "CKV_K8S_35=o Spring le a credencial do banco por variavel de ambiente; arquivo exigiria configtree e mudanca no servico"
   labels:
     app: servico-consulta
 spec:
@@ -354,9 +389,14 @@ spec:
         prometheus.io/path: /actuator/prometheus
         prometheus.io/port: "8084"
     spec:
+      # Nenhum servico fala com a API do Kubernetes; sem o token montado, um
+      # contêiner comprometido nao tem credencial do cluster para usar.
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: app
           image: ghcr.io/fabriciojunio/feira-servico-consulta:latest
