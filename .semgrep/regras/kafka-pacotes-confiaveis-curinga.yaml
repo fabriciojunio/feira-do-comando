@@ -1,0 +1,17 @@
+rules:
+  - id: kafka-pacotes-confiaveis-curinga
+    languages: [java]
+    severity: ERROR
+    message: >-
+      O JsonDeserializer do Spring Kafka aceitando qualquer pacote desserializa a classe que o
+      cabeçalho da mensagem mandar. Quem publica no tópico escolhe o tipo instanciado no
+      consumidor. Liste só os pacotes dos eventos.
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+    pattern-either:
+      - pattern: $C.put(JsonDeserializer.TRUSTED_PACKAGES, "*")
+      - pattern: $C.put("spring.json.trusted.packages", "*")
+      - pattern: $D.addTrustedPackages("*")
+      - pattern: $D.trustedPackages("*")

@@ -1,0 +1,32 @@
+rules:
+  - id: excecao-de-framework-na-resposta
+    languages: [java]
+    severity: WARNING
+    message: >-
+      A mensagem de $T vai para a resposta do cliente. Exceção de framework ou genérica traz
+      detalhe interno (tipo Java, trecho do JSON, SQL). Responda com texto fixo e registre o
+      detalhe no log.
+    metadata:
+      cwe: "CWE-209: Generation of Error Message Containing Sensitive Information"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+    patterns:
+      - pattern-inside: |
+          @ExceptionHandler(...)
+          $RET $METODO(..., $T $E, ...) { ... }
+      - metavariable-regex:
+          metavariable: $T
+          regex: ^(Exception|RuntimeException|Throwable|HttpMessageNotReadableException|ArithmeticException|DataAccessException|SQLException|JsonProcessingException|NullPointerException)$
+      - pattern: $E.getMessage()
+      # Mensagem liberada só para um tipo de domínio já conferido não vaza nada interno.
+      - pattern-not-inside: |
+          $E instanceof $X ? $E.getMessage() : $OUTRO
+      - pattern-not-inside: |
+          if ($E instanceof $X) { ... }
+      # Detalhe no log é o lugar certo dele; o problema é ele chegar ao cliente. Um padrão por
+      # nível: um metavariable-regex aqui filtraria também os achados verdadeiros.
+      - pattern-not-inside: $LOG.trace(...)
+      - pattern-not-inside: $LOG.debug(...)
+      - pattern-not-inside: $LOG.info(...)
+      - pattern-not-inside: $LOG.warn(...)
+      - pattern-not-inside: $LOG.error(...)
