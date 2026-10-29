@@ -11,6 +11,8 @@ resource "aws_db_subnet_group" "privado" {
   tags = { Name = "${local.nome}-privado" }
 }
 
+# Mesmo aceite do CKV_AWS_129 abaixo, para o Semgrep: exportar log para o CloudWatch cobra por GB.
+# nosemgrep: terraform.aws.security.aws-db-instance-no-logging.aws-db-instance-no-logging
 resource "aws_db_instance" "servico" {
   #checkov:skip=CKV_AWS_157: Multi-AZ dobra o custo; portfolio sem custo. Obrigatorio em producao
   #checkov:skip=CKV_AWS_118: monitoramento avancado cobra pelo CloudWatch; portfolio sem custo
