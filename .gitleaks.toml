@@ -1,0 +1,23 @@
+# Regras padrão do gitleaks, mais uma própria.
+#
+# A regra genérica do gitleaks só reconhece segredo feito de [A-Za-z0-9_.=-]. Senha forte, com
+# !, #, $ ou @, passa despercebida: a branch prova-dos-portoes plantou uma assim e o gitleaks
+# aprovou. A regra abaixo cobre esse caso. Medição em docs/seguranca/semgrep.md, seção gitleaks.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "senha-com-simbolo"
+description = "Senha ou segredo atribuído a variável, com qualquer caractere imprimível"
+regex = '''(?i)(?:password|passwd|senha|secret|segredo)[a-z0-9_]*["']?\s*(?:=|:|:=)\s*["']([^"'\s]{12,128})["']'''
+secretGroup = 1
+# 4,0 separa senha gerada (acima de 4,5) de texto com palavras e hífen, como
+# "conta-removida-sem-senha-valida" ou "senha-keystore.txt" (perto de 3,5).
+entropy = 4.0
+keywords = ["password", "passwd", "senha", "secret", "segredo"]
+
+[rules.allowlist]
+description = "Teste, nome de arquivo, hash, expressão regular ou referência a variável de ambiente"
+paths = ['''(?i)(^|/)(test|tests|__tests__|e2e|fixtures?)/''', '''(?i)\.(test|spec)\.[a-z]+$''', '''(?i)Test\.java$''']
+regexes = ['''^\$\{''', '''^\$2[aby]\$''', '''(?i)\.(txt|json|ya?ml|pem|key|keystore|properties|p12|jks)$''', '''A-Z|a-z|0-9\]''']
