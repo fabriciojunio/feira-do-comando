@@ -27,6 +27,16 @@ jobs:
       - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # O hook local de commit-msg recusa menção a ferramenta de IA, mas só
+      # existe na máquina em que foi instalado. Esta é a mesma regra do lado
+      # do servidor, para commit feito em qualquer outra máquina.
+      - name: Autoria do histórico
+        run: |
+          if git log --format=%B | grep -Eiq '^co-authored-by:.*(claude|anthropic)|generated with.*claude'; then
+            echo "Commit com coautoria de ferramenta de IA no histórico:"
+            git log --format='%h %s' -i --grep='claude' --grep='anthropic'
+            exit 1
+          fi
 
   dependencias:
     name: Vulnerabilidades em dependências (osv-scanner)
