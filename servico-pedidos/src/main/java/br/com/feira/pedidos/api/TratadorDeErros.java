@@ -112,7 +112,7 @@ public class TratadorDeErros {
     public ProblemDetail inesperado(Exception e, HttpServletRequest requisicao) {
         var identificador = UUID.randomUUID().toString().substring(0, 8);
         log.error("Erro inesperado [{}] em {} {}", identificador, requisicao.getMethod(),
-                requisicao.getRequestURI(), e);
+                semQuebraDeLinha(requisicao.getRequestURI()), e);
 
         var problema = problema(HttpStatus.INTERNAL_SERVER_ERROR, "erro-interno",
                 "Algo deu errado do nosso lado",
@@ -127,9 +127,30 @@ public class TratadorDeErros {
         var problema = ProblemDetail.forStatusAndDetail(status, detalhe);
         problema.setType(URI.create(BASE_DOS_TIPOS + tipo));
         problema.setTitle(titulo);
-        problema.setInstance(URI.create(requisicao.getRequestURI()));
+        instanciaDe(requisicao).ifPresent(problema::setInstance);
         problema.setProperty("codigo", codigo);
         problema.setProperty("ocorridoEm", relogio.instant().toString());
         return problema;
+    }
+
+    /**
+     * O caminho vem do cliente e pode não ser uma URI válida. Tratador de erro
+     * que lança exceção ao montar a resposta devolve um 500 cru, sem o formato
+     * de problema: nesse caso a resposta sai sem o campo `instance`.
+     */
+    private static java.util.Optional<URI> instanciaDe(HttpServletRequest requisicao) {
+        try {
+            return java.util.Optional.of(URI.create(requisicao.getRequestURI()));
+        } catch (IllegalArgumentException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    /**
+     * O caminho vem do cliente. Uma quebra de linha nele escreveria uma linha
+     * falsa no log, e quem investiga um incidente lê justamente essas linhas.
+     */
+    private static String semQuebraDeLinha(String texto) {
+        return texto == null ? null : texto.replaceAll("\\R", "_");
     }
 }
