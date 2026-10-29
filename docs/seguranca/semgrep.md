@@ -57,6 +57,24 @@ medir o que escapa seria preciso um conjunto de código com as falhas marcadas d
 arquivos de `.semgrep/testes` são o começo desse conjunto: cada caso `ruleid` é uma falha conhecida
 que a regra tem que continuar pegando.
 
+## Regra própria do gitleaks
+
+A branch `prova-dos-portoes` plantou quatro falhas e abriu um PR para produção. Semgrep, CodeQL e
+OSV-Scanner reprovaram as deles. O gitleaks **aprovou** a senha escrita no código: a regra genérica
+dele só reconhece segredo feito de `[A-Za-z0-9_.=-]`, e uma senha forte, com `!` ou `#`, escapa.
+
+A regra `senha-com-simbolo`, em `.gitleaks.toml`, cobre esse caso. Medida no histórico inteiro de
+dez repositórios:
+
+| Versão | Achados | Verdadeiros | Falsos positivos |
+|---|---|---|---|
+| Primeira (entropia 3,5, sem exclusões) | 33 | 1 (a senha plantada) | 32: senha de teste, nome de arquivo (`senha-keystore.txt`), nome de chave do SecureStore, marcador de conta anonimizada, expressão regular, senha pública da demonstração |
+| Atual (entropia 4,0; exclui teste, nome de arquivo, hash bcrypt e expressão regular) | 1 | 1 | 0 |
+
+O limite assumido: senha com menos de 12 caracteres não é acusada, porque abaixo disso a regra
+confundia palavra comum com segredo. A senha `Admin@2025` que existiu no histórico do ConectAgente
+(corrigida, ver o `seguranca.md` de lá) tem 10 e não seria pega por esta regra.
+
 ## Como rodar
 
 ```bash
