@@ -57,6 +57,24 @@ misses. Measuring misses would need a body of code with the flaws labelled befor
 `.semgrep/testes` are the start of that set: each `ruleid` case is a known flaw the rule must keep
 catching.
 
+## Custom gitleaks rule
+
+The `prova-dos-portoes` branch planted four flaws and opened a PR to production. Semgrep, CodeQL and
+OSV-Scanner failed theirs. gitleaks **passed** the password written in the code: its generic rule
+only recognises secrets made of `[A-Za-z0-9_.=-]`, and a strong password with `!` or `#` slips by.
+
+The `senha-com-simbolo` rule in `.gitleaks.toml` covers that case. Measured over the full history of
+ten repositories:
+
+| Version | Findings | True | False positives |
+|---|---|---|---|
+| First (entropy 3.5, no exclusions) | 33 | 1 (the planted password) | 32: test passwords, a file name (`senha-keystore.txt`), a SecureStore key name, an anonymised-account marker, a regular expression, public demo passwords |
+| Current (entropy 4.0; excludes tests, file names, bcrypt hashes and regular expressions) | 1 | 1 | 0 |
+
+The accepted limit: passwords shorter than 12 characters are not flagged, because below that the rule
+mistook ordinary words for secrets. The `Admin@2025` password that once existed in ConectAgente's
+history (fixed, see its `seguranca.md`) has 10 and would not be caught by this rule.
+
 ## Running
 
 ```bash
