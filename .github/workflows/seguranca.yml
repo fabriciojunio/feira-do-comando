@@ -63,6 +63,25 @@ jobs:
             -L target/bom.cdx.json
             -L web/package-lock.json
 
+  semgrep:
+    name: Análise estática (Semgrep, regras próprias)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # As regras próprias têm teste: cada uma prova o que pega e o que não pega
+      # (docs/seguranca/semgrep.md). Regra sem teste quebra em silêncio.
+      - name: Testar as regras próprias
+        run: pipx run --spec semgrep==1.181.0 semgrep --test --metrics=off --config .semgrep/regras .semgrep/testes
+      - name: Varrer com os conjuntos públicos e as regras próprias
+        run: |
+          pipx run --spec semgrep==1.181.0 semgrep scan --metrics=off --error \
+            --config p/java --config p/owasp-top-ten --config p/secrets --config p/security-audit \
+            --config .semgrep/regras \
+            --exclude .semgrep --exclude target --exclude node_modules --exclude web .
+
   codeql:
     name: Análise estática (CodeQL, ${{ matrix.linguagem }})
     runs-on: ubuntu-latest
