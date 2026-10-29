@@ -1,0 +1,23 @@
+rules:
+  - id: consulta-montada-por-concatenacao
+    languages: [java]
+    severity: ERROR
+    message: >-
+      Consulta montada com concatenação ou String.format: se uma parte vem de fora, é injeção
+      de SQL ou JPQL. Use parâmetro (:nome ou ?) e passe o valor separado.
+    metadata:
+      cwe: "CWE-89: Improper Neutralization of Special Elements used in an SQL Command"
+      owasp: "A03:2021 - Injection"
+      confidence: MEDIUM
+    pattern-either:
+      - pattern: $EM.createQuery($A + $B, ...)
+      - pattern: $EM.createNativeQuery($A + $B, ...)
+      - pattern: $EM.createQuery(String.format(...), ...)
+      - pattern: $EM.createNativeQuery(String.format(...), ...)
+      - patterns:
+          - pattern-either:
+              - pattern: $JDBC.$METODO($A + $B, ...)
+              - pattern: $JDBC.$METODO(String.format(...), ...)
+          - metavariable-regex:
+              metavariable: $METODO
+              regex: ^(query|queryForObject|queryForList|queryForMap|update|execute|batchUpdate)$

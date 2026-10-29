@@ -1,0 +1,25 @@
+rules:
+  - id: cors-qualquer-origem
+    languages: [java]
+    severity: ERROR
+    message: >-
+      CORS aberto para qualquer origem: qualquer site lê a resposta da API. Liste as origens.
+    metadata:
+      cwe: "CWE-942: Permissive Cross-domain Policy with Untrusted Domains"
+      owasp: "A05:2021 - Security Misconfiguration"
+      confidence: HIGH
+    pattern-either:
+      - pattern: $C.allowedOrigins("*")
+      - pattern: $C.setAllowedOrigins(List.of("*"))
+      - pattern: $C.addAllowedOrigin("*")
+      - pattern: $C.allowedOriginPatterns("*")
+      - pattern: $C.addAllowedOriginPattern("*")
+      - pattern: |
+          @CrossOrigin
+          $RET $M(...) { ... }
+      - pattern: |
+          @CrossOrigin("*")
+          $RET $M(...) { ... }
+      - pattern: |
+          @CrossOrigin(origins = "*")
+          $RET $M(...) { ... }
