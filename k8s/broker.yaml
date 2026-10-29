@@ -63,6 +63,8 @@ spec:
       containers:
         - name: redpanda
           image: redpandadata/redpanda:v24.2.7
+          securityContext:
+            allowPrivilegeEscalation: false
           args:
             - redpanda
             - start
