@@ -6,6 +6,7 @@
 # para a escolha ser revista quando a carga mudar.
 
 resource "aws_security_group" "kafka" {
+  #checkov:skip=CKV2_AWS_5: falso positivo; o grupo esta ligado ao aws_msk_serverless_cluster abaixo, que o Checkov nao reconhece
   name        = "${local.nome}-kafka"
   description = "Kafka, alcancavel apenas pelos servicos"
   vpc_id      = aws_vpc.principal.id
@@ -18,11 +19,14 @@ resource "aws_security_group" "kafka" {
     security_groups = [aws_security_group.servicos.id]
   }
 
+  # O broker so responde a quem o chamou, e resposta de conexao aceita nao
+  # precisa de regra de saida. Saida so para dentro da VPC.
   egress {
+    description = "Somente dentro da VPC"
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = [var.cidr_da_rede]
   }
 
   tags = { Name = "${local.nome}-kafka" }

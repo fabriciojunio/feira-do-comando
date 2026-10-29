@@ -12,6 +12,11 @@ resource "aws_db_subnet_group" "privado" {
 }
 
 resource "aws_db_instance" "servico" {
+  #checkov:skip=CKV_AWS_157: Multi-AZ dobra o custo; portfolio sem custo. Obrigatorio em producao
+  #checkov:skip=CKV_AWS_118: monitoramento avancado cobra pelo CloudWatch; portfolio sem custo
+  #checkov:skip=CKV_AWS_353: Performance Insights nao existe na classe micro usada aqui
+  #checkov:skip=CKV_AWS_129: exportar log para o CloudWatch cobra por GB; portfolio sem custo
+  #checkov:skip=CKV2_AWS_30: log de toda consulta gravaria dado pessoal de cliente e pedido no log, contra a LGPD
   for_each = toset(var.servicos)
 
   identifier     = "${local.nome}-${each.key}"
@@ -41,6 +46,14 @@ resource "aws_db_instance" "servico" {
   apply_immediately = var.ambiente != "prod"
 
   auto_minor_version_upgrade = true
+
+  # Autenticacao por IAM ligada: o servico pode entrar com token de vida curta
+  # em vez da senha mestre. Nao custa nada.
+  iam_database_authentication_enabled = true
+
+  # Snapshot sem as tags perde a marca de ambiente e de dono, e e por elas que
+  # a limpeza e o controle de custo encontram o que apagar.
+  copy_tags_to_snapshot = true
 
   tags = { Name = "${local.nome}-${each.key}" }
 }

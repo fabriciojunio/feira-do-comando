@@ -22,6 +22,23 @@ kind: StatefulSet
 metadata:
   name: mongo
   namespace: feira
+  # Imagens oficiais de terceiro, usadas so no ambiente de estudo. Em
+  # producao este papel e do RDS e do MSK (infra/). Cada aceite diz o porque.
+  annotations:
+    checkov.io/skip1: "CKV_K8S_23=imagem oficial de terceiro inicia como root para ajustar o dono do volume"
+    checkov.io/skip2: "CKV_K8S_40=idem: o UID e o da imagem oficial"
+    checkov.io/skip3: "CKV_K8S_20=idem: a entrada da imagem troca de usuario depois de iniciar"
+    checkov.io/skip4: "CKV_K8S_22=banco e broker escrevem fora do volume de dados ao iniciar"
+    checkov.io/skip5: "CKV_K8S_28=capacidades padrao exigidas pela imagem oficial"
+    checkov.io/skip6: "CKV_K8S_37=capacidades padrao exigidas pela imagem oficial"
+    checkov.io/skip7: "CKV_K8S_30=contexto do container limitado pelo que a imagem oficial aceita"
+    checkov.io/skip8: "CKV_K8S_29=contexto do container limitado pelo que a imagem oficial aceita"
+    checkov.io/skip9: "CKV_K8S_35=a imagem oficial so le a senha por variavel de ambiente"
+    checkov.io/skip10: "CKV_K8S_11=limite de CPU estrangula a partida; requests e limite de memoria estao definidos"
+    checkov.io/skip11: "CKV_K8S_43=manifesto de estudo; em producao o banco e o RDS e o broker e o MSK do Terraform"
+    checkov.io/skip12: "CKV_K8S_14=manifesto de estudo; em producao o banco e o RDS e o broker e o MSK do Terraform"
+    checkov.io/skip13: "CKV_K8S_15=tag fixa da imagem oficial; nao precisa baixar de novo a cada partida"
+    checkov.io/skip14: "CKV_K8S_8=a sonda de prontidao ja cobre; liveness em banco reinicia no meio de recuperacao"
 spec:
   serviceName: mongo
   replicas: 1
@@ -33,6 +50,10 @@ spec:
       labels:
         app: mongo
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: mongo
           image: mongo:7.0
