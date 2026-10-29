@@ -39,4 +39,29 @@ class TratadorDeErrosTest {
             logger.detachAppender(registros);
         }
     }
+
+    @Test
+    @DisplayName("JSON ilegível responde texto fixo, sem tipo Java nem trecho do corpo")
+    void corpoIlegivelNaoVazaDetalheInterno() {
+        var detalheDoJackson = "JSON parse error: Cannot deserialize value of type `java.math.BigDecimal` "
+                + "from String \"abc\": not a valid representation";
+        var resposta = new TratadorDeErros(java.time.Clock.systemUTC()).corpoIlegivel(
+                new org.springframework.http.converter.HttpMessageNotReadableException(detalheDoJackson,
+                        new org.springframework.mock.http.MockHttpInputMessage(new byte[0])),
+                new MockHttpServletRequest("POST", "/pedidos"));
+
+        assertThat(resposta.getStatus()).isEqualTo(400);
+        assertThat(resposta.getDetail()).doesNotContain("java.math", "BigDecimal", "abc");
+    }
+
+    @Test
+    @DisplayName("regra do domínio violada continua chegando ao cliente")
+    void regraDoDominioChegaAoCliente() {
+        var resposta = new TratadorDeErros(java.time.Clock.systemUTC()).regraVioladaNaEntrada(
+                new IllegalArgumentException("pedido precisa de ao menos um item"),
+                new MockHttpServletRequest("POST", "/pedidos"));
+
+        assertThat(resposta.getStatus()).isEqualTo(400);
+        assertThat(resposta.getDetail()).isEqualTo("pedido precisa de ao menos um item");
+    }
 }
