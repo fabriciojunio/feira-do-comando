@@ -1,0 +1,16 @@
+rules:
+  - id: kafka-pacotes-confiaveis-config
+    languages: [yaml]
+    severity: ERROR
+    message: >-
+      spring.json.trusted.packages com "*" desserializa a classe que o produtor escolher.
+      Liste só os pacotes dos eventos.
+    metadata:
+      cwe: "CWE-502: Deserialization of Untrusted Data"
+      owasp: "A08:2021 - Software and Data Integrity Failures"
+      confidence: HIGH
+    pattern-either:
+      - pattern: |
+          spring.json.trusted.packages: "*"
+      - pattern: |
+          trusted.packages: "*"

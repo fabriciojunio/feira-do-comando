@@ -1,0 +1,6 @@
+consumidor-aberto:
+  # ruleid: kafka-pacotes-confiaveis-config
+  spring.json.trusted.packages: "*"
+consumidor-fechado:
+  # ok: kafka-pacotes-confiaveis-config
+  spring.json.trusted.packages: "br.com.feira.contratos.eventos"

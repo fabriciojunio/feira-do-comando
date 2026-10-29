@@ -57,6 +57,8 @@ spec:
       containers:
         - name: mongo
           image: mongo:7.0
+          securityContext:
+            allowPrivilegeEscalation: false
           ports:
             - containerPort: 27017
           readinessProbe:

@@ -1,0 +1,24 @@
+rules:
+  - id: random-para-segredo
+    languages: [java]
+    severity: WARNING
+    message: >-
+      java.util.Random é previsível: com algumas saídas dá para calcular as próximas. Este método
+      parece gerar token, senha, código ou chave; use SecureRandom.
+    metadata:
+      cwe: "CWE-330: Use of Insufficiently Random Values"
+      owasp: "A02:2021 - Cryptographic Failures"
+      confidence: MEDIUM
+      # Primeira versão disparava em todo Random e acertou 0 de 2 na Feira: sorteio de simulação
+      # não é segredo. Restrita a método com nome de segredo; medição em docs/seguranca/semgrep.md.
+    patterns:
+      - pattern-inside: |
+          $RET $METODO(...) { ... }
+      - metavariable-regex:
+          metavariable: $METODO
+          regex: (?i).*(token|senha|segredo|chave|codigo|otp|nonce|salt|sessao|cupom|convite|recuperacao).*
+      - pattern-either:
+          - pattern: new java.util.Random(...)
+          - pattern: new Random(...)
+          - pattern: java.util.concurrent.ThreadLocalRandom.current()
+          - pattern: ThreadLocalRandom.current()

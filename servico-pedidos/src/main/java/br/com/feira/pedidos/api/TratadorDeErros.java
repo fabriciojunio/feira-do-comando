@@ -80,11 +80,27 @@ public class TratadorDeErros {
                 "Falta o cabecalho " + e.getHeaderName(), "CABECALHO_OBRIGATORIO", requisicao);
     }
 
-    @ExceptionHandler({HttpMessageNotReadableException.class, IllegalArgumentException.class, ArithmeticException.class})
-    public ProblemDetail requisicaoInvalida(Exception e, HttpServletRequest requisicao) {
+    /** Regra do dominio violada: a mensagem foi escrita para o cliente ler. */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail regraVioladaNaEntrada(IllegalArgumentException e, HttpServletRequest requisicao) {
         return problema(HttpStatus.BAD_REQUEST, "requisicao-invalida",
                 "Nao foi possivel ler a requisicao", e.getMessage(), "REQUISICAO_INVALIDA",
                 requisicao);
+    }
+
+    /**
+     * Corpo que o Jackson nao conseguiu ler, ou valor fora da escala do dinheiro.
+     * A mensagem dessas excecoes traz tipo Java e trecho do JSON: fica no log, e o
+     * cliente recebe texto fixo. Achado pela regra excecao-de-framework-na-resposta.
+     */
+    @ExceptionHandler({HttpMessageNotReadableException.class, ArithmeticException.class})
+    public ProblemDetail corpoIlegivel(Exception e, HttpServletRequest requisicao) {
+        log.info("Requisicao ilegivel em {} {}: {}", requisicao.getMethod(),
+                semQuebraDeLinha(requisicao.getRequestURI()), semQuebraDeLinha(e.getMessage()));
+        return problema(HttpStatus.BAD_REQUEST, "requisicao-invalida",
+                "Nao foi possivel ler a requisicao",
+                "O corpo enviado nao e um JSON valido ou tem um valor fora do formato esperado.",
+                "REQUISICAO_INVALIDA", requisicao);
     }
 
     /**
