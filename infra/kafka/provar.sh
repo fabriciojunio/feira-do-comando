@@ -163,7 +163,16 @@ verificar "o broker apresenta certificado válido da CA da Feira, para o nome ce
 
 echo
 echo "Pedido de ponta a ponta com os serviços autenticados"
-"${COMPOSE[@]}" up -d --build --wait --wait-timeout 300 \
+# O build baixa dependências do Maven Central dentro do contêiner, e o Central
+# às vezes falha uma transferência ("artifact absent"). Três tentativas antes
+# de desistir, para a prova não cair por instabilidade de rede.
+SERVICOS=(servico-pedidos servico-estoque servico-pagamentos servico-consulta)
+for tentativa in 1 2 3; do
+  "${COMPOSE[@]}" build "${SERVICOS[@]}" && break
+  [ "$tentativa" = 3 ] && exit 1
+  echo "Build falhou na tentativa $tentativa; tentando de novo."
+done
+"${COMPOSE[@]}" up -d --wait --wait-timeout 300 \
   banco-pedidos banco-estoque banco-pagamentos mongo \
   servico-pedidos servico-estoque servico-pagamentos servico-consulta
 
