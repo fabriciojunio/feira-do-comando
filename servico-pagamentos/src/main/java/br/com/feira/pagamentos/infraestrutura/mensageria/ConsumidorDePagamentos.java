@@ -50,15 +50,38 @@ public class ConsumidorDePagamentos {
         this.metricas = metricas;
     }
 
+    /*
+     * Um listener por topico, e nao um para os dois. Os eventos de um pedido
+     * usam a mesma chave e caem na particao de mesmo numero nos dois topicos;
+     * com um listener so, as duas particoes ficavam na mesma thread. Quando o
+     * EstoqueReservado era lido primeiro, a repeticao a espera da cobranca
+     * segurava a thread, o PedidoCriado que criaria a cobranca nao era lido, e
+     * depois de 30 segundos o evento ia para a fila de mortas com o pedido
+     * parado. Visto na prova do broker seguro, com os offsets do grupo.
+     */
     @KafkaListener(
-            topics = {Topicos.PEDIDOS, Topicos.ESTOQUE},
+            id = "pagamentos-pedidos",
+            topics = Topicos.PEDIDOS,
             groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "fabricaDeConsumidores")
     @Transactional
-    public void consumir(@Payload String carga,
-                         @Header(name = "kafka_receivedTopic", required = false) String topico,
-                         @Header(name = "kafka_receivedMessageKey", required = false) String chave) {
+    public void consumirPedidos(@Payload String carga,
+                                @Header(name = "kafka_receivedMessageKey", required = false) String chave) {
+        consumir(carga, Topicos.PEDIDOS, chave);
+    }
 
+    @KafkaListener(
+            id = "pagamentos-estoque",
+            topics = Topicos.ESTOQUE,
+            groupId = "${spring.kafka.consumer.group-id}",
+            containerFactory = "fabricaDeConsumidores")
+    @Transactional
+    public void consumirEstoque(@Payload String carga,
+                                @Header(name = "kafka_receivedMessageKey", required = false) String chave) {
+        consumir(carga, Topicos.ESTOQUE, chave);
+    }
+
+    private void consumir(String carga, String topico, String chave) {
         Evento evento = ler(carga, topico, chave);
 
         if (entrada.jaProcessou(evento)) {
