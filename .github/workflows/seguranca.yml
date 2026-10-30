@@ -63,6 +63,59 @@ jobs:
             -L target/bom.cdx.json
             -L web/package-lock.json
 
+  sbom:
+    name: SBOM (SPDX e CycloneDX) e Grype
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+      # O conversor decide o que o Grype ignora; se ele errar, o Grype cala uma
+      # falha que o OSV não aceitou.
+      - name: Testar o conversor de aceites
+        run: python3 -m unittest scripts/test_aceites_para_grype.py -v
+      # O SBOM sai dos jars de verdade, com as transitivas que vão para a imagem.
+      - name: Empacotar os serviços
+        run: mvn -B -q package -DskipTests
+      - name: Instalar syft e grype com hash conferido
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          baixar() {
+            curl -fsSL -o pacote.tar.gz "$1"
+            echo "$2  pacote.tar.gz" | sha256sum -c -
+            tar -xzf pacote.tar.gz "$3"
+          }
+          baixar https://github.com/anchore/syft/releases/download/v1.55.0/syft_1.55.0_linux_amd64.tar.gz \
+            bb65249542db5fedeeb4d3f9b018b75e7264dbfbbb10486f044581a92f90490d syft
+          baixar https://github.com/anchore/grype/releases/download/v0.121.0/grype_0.121.0_linux_amd64.tar.gz \
+            64e07133d3486115de647a66581461dccf5c732748a0a3119077395565f15519 grype
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Gerar o SBOM em SPDX e em CycloneDX
+        run: |
+          syft scan dir:. --exclude './**/node_modules/**' -q \
+            -o spdx-json=sbom.spdx.json -o cyclonedx-json=sbom.cdx.json
+      # Uma fonte de aceites só: a falha aceita no osv-scanner.toml, com motivo e
+      # prazo, é a que o Grype ignora. Aceite vencido volta a reprovar nos dois.
+      - name: Grype contra o SBOM, com os aceites do OSV
+        run: |
+          python3 scripts/aceites_para_grype.py osv-scanner.toml .grype-ci.yaml
+          grype sbom:sbom.cdx.json -c .grype-ci.yaml --fail-on high
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: sbom
+          path: |
+            sbom.spdx.json
+            sbom.cdx.json
+          retention-days: 90
+
   semgrep:
     name: Análise estática (Semgrep, regras próprias)
     runs-on: ubuntu-latest
