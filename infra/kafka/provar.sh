@@ -182,6 +182,9 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 if [ "$status" != CONFIRMADO ]; then
+  echo "       pedido: $id"
+  rpk group describe feira-pagamentos 2>&1 | sed 's/^/       /'
+  "${COMPOSE[@]}" logs --no-color servico-pagamentos 2>&1 | grep -m3 -E "Tentativa 1 |Evento ilegivel" | cut -c1-600 | sed 's/^/       /'
   for servico in servico-pagamentos servico-pedidos; do
     echo "       --- $servico"
     "${COMPOSE[@]}" logs --no-color "$servico" 2>&1       | grep -iE "dlq|DeadLetter|ilegivel|Exception|Caused by|denied|authoriz" | sort | uniq -c | sort -rn | head -20       | cut -c1-600 | sed 's/^/       /'
