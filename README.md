@@ -254,6 +254,26 @@ Docker, Kubernetes, Terraform.
 Os erros seguem a [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html), com uma extensão
 `codigo` estável para o cliente poder decidir sem interpretar texto corrido.
 
+## Segurança da aplicação: o que cada tipo de ferramenta faz
+
+A esteira cobre o código parado e a aplicação rodando por fora. Três categorias que as vagas pedem
+ficam de fora de propósito, e a tabela diz o que cada uma acrescentaria.
+
+| Categoria | O que é | Aqui | Equivalente comercial |
+|---|---|---|---|
+| SAST | lê o código sem executar | Semgrep com 6 regras próprias testadas e CodeQL | Checkmarx, Veracode, Fortify |
+| SCA e SBOM | dependência com vulnerabilidade conhecida | OSV-Scanner, SBOM SPDX e CycloneDX, Grype | Snyk, Black Duck, Sonatype |
+| DAST | ataca a aplicação rodando, de fora | ZAP baseline no sistema subido | Burp Suite Enterprise, Invicti |
+| Admissão e runtime | barra o que sobe e vigia o que roda | Kyverno no cluster, regras Falco | Wiz, Prisma Cloud, Sysdig |
+| IAST | agente dentro da aplicação durante os testes, que vê a requisição chegar ao ponto perigoso | não usado | Contrast Assess, Seeker |
+| RASP | agente dentro da aplicação em produção, que bloqueia o ataque na hora | não usado | Contrast Protect, Imperva RASP |
+| ASPM | painel que junta os achados de todas as ferramentas, tira duplicata e prioriza | não usado; o crivo (outro projeto) faz a priorização por EPSS e KEV | Apiiro, ArmorCode, DefectDojo (aberto) |
+
+IAST e RASP dependem de agente pago na JVM, e o que eles pegam a mais aqui seria pouco: não há
+login nem dado de usuário, e a fronteira de entrada já tem validação, testes de contrato e o
+ZAP. O orquestrador de CI é o GitHub Actions; Jenkins e GitLab CI rodariam a mesma esteira com
+as mesmas ferramentas.
+
 ## O que não está aqui
 
 Dito de uma vez, em vez de descoberto depois:
@@ -263,5 +283,7 @@ Dito de uma vez, em vez de descoberto depois:
 - **Não há autenticação.** O id do cliente chega num cabeçalho. Num sistema real ele viria de um
   token validado; manter simples deixa o foco na saga.
 - **Nunca rodou em cluster nem em conta da AWS de verdade.** Os manifestos do Kubernetes são
-  validados contra os esquemas e aplicados num cluster `kind` descartável a cada build, e o
-  Terraform passa pelo `validate`, mas nenhum dos dois foi para infraestrutura de produção.
+  validados contra os esquemas e aplicados num cluster `kind` descartável a cada build, com o
+  Kyverno barrando o que não deve subir. O Terraform passa pelo `validate` e pelo Checkov, e o
+  módulo do estado é aplicado num emulador da AWS (moto), mas nada foi para infraestrutura de
+  produção.

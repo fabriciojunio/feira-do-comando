@@ -284,6 +284,25 @@ Errors follow [RFC 9457](https://www.rfc-editor.org/rfc/rfc9457.html)
 (Problem Details), with a stable `codigo` extension so clients can branch
 without parsing prose.
 
+## Application security: what each kind of tool does
+
+The pipeline covers code at rest and the running application from the outside. Three categories
+that job ads mention are left out on purpose, and the table says what each would add.
+
+| Category | What it is | Here | Commercial equivalent |
+|---|---|---|---|
+| SAST | reads the code without running it | Semgrep with 6 tested in-house rules, CodeQL | Checkmarx, Veracode, Fortify |
+| SCA and SBOM | dependencies with known vulnerabilities | OSV-Scanner, SPDX and CycloneDX SBOM, Grype | Snyk, Black Duck, Sonatype |
+| DAST | attacks the running app from the outside | ZAP baseline against the deployed system | Burp Suite Enterprise, Invicti |
+| Admission and runtime | blocks what gets deployed and watches what runs | Kyverno in the cluster, Falco rules | Wiz, Prisma Cloud, Sysdig |
+| IAST | in-app agent during tests that sees a request reach a dangerous sink | not used | Contrast Assess, Seeker |
+| RASP | in-app agent in production that blocks the attack as it happens | not used | Contrast Protect, Imperva RASP |
+| ASPM | dashboard that merges every tool's findings, deduplicates and prioritises | not used; crivo (another project) prioritises by EPSS and KEV | Apiiro, ArmorCode, DefectDojo (open source) |
+
+IAST and RASP need a paid JVM agent, and what they would add here is small: there is no login or
+user data, and the input boundary already has validation, contract tests and ZAP. The CI runner is
+GitHub Actions; Jenkins or GitLab CI would run the same pipeline with the same tools.
+
 ## What is not here
 
 Said upfront rather than discovered later:
@@ -295,5 +314,6 @@ Said upfront rather than discovered later:
   comes from a validated token; keeping it simple leaves the focus on the saga.
 - **Never applied to a real cluster or a real AWS account.** The Kubernetes
   manifests are validated against the API schemas and applied to a throwaway
-  `kind` cluster on every build, and the Terraform is checked with `validate`,
-  but neither has run against production infrastructure.
+  `kind` cluster on every build, with Kyverno blocking what must not run. The
+  Terraform goes through `validate` and Checkov, and the state module is applied
+  to an AWS emulator (moto), but nothing has run on production infrastructure.
