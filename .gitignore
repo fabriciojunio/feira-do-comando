@@ -18,3 +18,7 @@ infra/.terraform.lock.hcl
 *.tfstate.*
 *.tfvars
 .vercel
+
+# Gerado na CI a partir do osv-scanner.toml (scripts/aceites_para_grype.py).
+.grype-ci.yaml
+sbom.*.json
