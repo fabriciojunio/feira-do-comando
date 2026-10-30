@@ -26,7 +26,7 @@ root to set up its data directory.
   and a `kubectl apply --dry-run=server` with the same pods proves the API server rejects the bad
   ones and admits the good ones.
 
-## Why `k8s/ci` exists
+## Why `overlays/ci` exists
 
-The base uses `:latest` as a reading example. The `k8s/ci` overlay swaps it for a fixed tag, which
+The base uses `:latest` as a reading example. The `overlays/ci` overlay swaps it for a fixed tag, which
 is what a real deploy does with the commit tag, and that is what the cluster receives.

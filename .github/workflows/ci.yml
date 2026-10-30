@@ -214,7 +214,7 @@ jobs:
       # A base usa :latest como exemplo de leitura; o cluster recebe o overlay
       # com tag fixa, que é o que a política de imagem confiável aceita.
       - name: Aplicar os manifestos
-        run: kubectl apply -k k8s/ci/
+        run: kubectl apply -k overlays/ci/
 
       # Dry-run no servidor passa pela admissão de verdade, sem criar nada.
       # Cada pod ruim tem de ser recusado; o correto, aceito.
