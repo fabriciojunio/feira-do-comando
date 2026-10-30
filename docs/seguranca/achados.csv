@@ -313,12 +313,12 @@ codereview-ai,dependency-check#320,Dependency-Check,low,CVE-2026-24733 em tomcat
 codereview-ai,dependency-check#321,Dependency-Check,low,CVE-2026-43514 em tomcat-embed-core-10.1.42.jar,2026-10-12T19:43:40Z,2026-10-30T03:04:41-03:00,corrigido,PR #2: Spring Boot 4.1.2; OSV limpo no SBOM de produção
 codereview-ai,dependency-check#437,Dependency-Check,warning,CVE-2026-109345 em swagger-ui-bundle.js,2026-10-26T14:00:07Z,2026-10-30T03:04:41-03:00,corrigido,PR #2: Spring Boot 4.1.2; OSV limpo no SBOM de produção
 codereview-ai,dependency-check#438,Dependency-Check,warning,CVE-2026-109345 em swagger-ui-es-bundle.js,2026-10-26T14:00:07Z,2026-10-30T03:04:41-03:00,corrigido,PR #2: Spring Boot 4.1.2; OSV limpo no SBOM de produção
-codereview-ai,codeql#7,CodeQL,note,java/unused-parameter,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
-codereview-ai,codeql#6,CodeQL,note,java/unused-parameter,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
-codereview-ai,codeql#5,CodeQL,warning,java/constant-comparison,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
-codereview-ai,codeql#4,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
-codereview-ai,codeql#3,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
-codereview-ai,codeql#2,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,,aberto,corrigido em homologação (a1ad7b4)
+codereview-ai,codeql#7,CodeQL,note,java/unused-parameter,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
+codereview-ai,codeql#6,CodeQL,note,java/unused-parameter,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
+codereview-ai,codeql#5,CodeQL,warning,java/constant-comparison,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
+codereview-ai,codeql#4,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
+codereview-ai,codeql#3,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
+codereview-ai,codeql#2,CodeQL,note,java/call-to-object-tostring,2026-09-02T14:17:07Z,2026-10-30T17:17:31Z,corrigido,PR #3 (a1ad7b4); CodeQL fechou em produção
 codereview-ai,codeql#1,CodeQL,high,java/spring-disabled-csrf-protection,2026-09-02T14:17:07Z,2026-10-30T17:12:16Z,falso_positivo,"JWT só no cabeçalho Authorization, sessão stateless, sem cookie"
 authcore,codeql#5,CodeQL,high,js/missing-token-validation,2026-10-28T14:08:39Z,2026-10-30T12:41:14Z,falso_positivo,csrfProtection confere Origin em requisição com cookie; testado em auth.routes.test.ts
 vitrine-bauru,codeql#1,CodeQL,high,java/spring-disabled-csrf-protection,2026-10-28T15:10:01Z,2026-10-30T15:33:51Z,falso_positivo,"token só no cabeçalho Authorization, sessão stateless, sem cookie"

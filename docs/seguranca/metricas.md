@@ -2,7 +2,7 @@
 
 Gerado em 30/10/2026 a partir de `docs/seguranca/achados.csv` e dos aceites com prazo do OSV-Scanner. Prazo para corrigir: crítica 7 dias, alta 30, média 90, baixa 180.
 
-**326 achados registrados**: 317 corrigidos, 6 abertos e 3 falsos positivos.
+**326 achados registrados**: 323 corrigidos, 0 abertos e 3 falsos positivos.
 
 ## Tempo até corrigir
 
@@ -11,13 +11,11 @@ Gerado em 30/10/2026 a partir de `docs/seguranca/achados.csv` e dos aceites com 
 | crítica | 40 | 17,4 | 17,4 | 0% |
 | alta | 122 | 17,4 | 17,4 | 100% |
 | média | 134 | 17,4 | 17,3 | 100% |
-| baixa | 21 | 17,4 | 14,5 | 100% |
+| baixa | 27 | 17,4 | 24,2 | 100% |
 
 ## Abertos
 
-| Severidade | Abertos | Mais antigo (dias) | Com prazo estourado |
-|---|---|---|---|
-| baixa | 6 | 58,1 | 0 |
+Nenhum achado aberto.
 
 ## Falsos positivos
 
