@@ -1,0 +1,11 @@
+# Propriedades de cluster aplicadas na primeira subida do broker seguro.
+# SASL e autorização ligados desde o início: não existe janela em que o broker
+# aceite conexão anônima. A API de administração só passa a exigir senha depois
+# que o provar.sh cria o usuário admin, porque é por ela que o usuário nasce.
+# enable_sasl liga SASL em todos os listeners e já aplica as ACLs. Somar
+# kafka_enable_authorization a ele deixa o broker inconsistente: as conexões
+# falhavam com ILLEGAL_SASL_STATE.
+enable_sasl: true
+sasl_mechanisms: ["SCRAM"]
+superusers: ["admin"]
+auto_create_topics_enabled: false

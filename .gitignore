@@ -24,3 +24,6 @@ infra/estado/.terraform.lock.hcl
 # Gerado na CI a partir do osv-scanner.toml (scripts/aceites_para_grype.py).
 .grype-ci.yaml
 sbom.*.json
+
+# Certificados de teste gerados pelo infra/kafka/provar.sh a cada execução.
+infra/kafka/certs/

@@ -9,6 +9,11 @@ FROM maven:3.9-eclipse-temurin-21 AS construcao
 ARG MODULO
 WORKDIR /app
 
+# O Maven Central as vezes falha uma transferencia no meio do download
+# ("artifact absent"), e o build inteiro caia por isso. O resolvedor repete
+# cada download ate cinco vezes, com intervalo, antes de desistir.
+ENV MAVEN_ARGS="-Daether.connector.http.retryHandler.count=5 -Daether.connector.http.retryHandler.interval=3000"
+
 # Os poms primeiro, e o download depois: dependencia muda muito menos que
 # codigo, e assim o cache do Docker aproveita entre builds.
 COPY pom.xml .

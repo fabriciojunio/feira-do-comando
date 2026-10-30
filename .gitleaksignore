@@ -1,0 +1,5 @@
+# Falso positivo da regra senha-com-simbolo: a linha guardava o nome da
+# variável de ambiente (FEIRA_KAFKA_SENHA_<serviço>), não uma senha. A senha é
+# gerada a cada execução do provar.sh. A linha foi reescrita sem atribuição no
+# commit seguinte; este registro cobre só o commit em que ela entrou.
+ef3ff57653bd1a36514fffc1ccaedd5995afa72f:infra/kafka/provar.sh:senha-com-simbolo:61

@@ -1,0 +1,86 @@
+# Sobreposição com o broker fechado: TLS, SASL/SCRAM com um usuário por
+# serviço e autorização por ACL. Não sobe sozinha; quem prepara certificados,
+# usuários e permissões é o infra/kafka/provar.sh.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.seguro.yml up -d
+#
+# As senhas vêm do ambiente e os certificados de infra/kafka/certs, que não vão
+# para o Git.
+
+x-kafka-cliente: &kafka-cliente
+  SPRING_KAFKA_SECURITY_PROTOCOL: SASL_SSL
+  SPRING_KAFKA_SSL_TRUST_STORE_TYPE: PEM
+  SPRING_KAFKA_SSL_TRUST_STORE_LOCATION: file:/certs/ca.crt
+  SPRING_KAFKA_PROPERTIES_SASL_MECHANISM: SCRAM-SHA-256
+
+services:
+  broker:
+    entrypoint: ["/bin/bash", "-c"]
+    # O TLS é configuração do nó e precisa estar no redpanda.yaml antes da
+    # subida; o rpk redpanda start não tem flag para isso.
+    command:
+      - >-
+        rpk redpanda config set redpanda.kafka_api_tls --format json
+        '[{"name":"interno","enabled":true,"cert_file":"/certs/broker.crt","key_file":"/certs/broker.key","truststore_file":"/certs/ca.crt","require_client_auth":false},
+        {"name":"externo","enabled":true,"cert_file":"/certs/broker.crt","key_file":"/certs/broker.key","truststore_file":"/certs/ca.crt","require_client_auth":false}]'
+        && cp /bootstrap/bootstrap.yaml /etc/redpanda/.bootstrap.yaml
+        && exec /entrypoint.sh redpanda start --smp=1 --memory=512M --overprovisioned
+        --node-id=0 --check=false
+        --kafka-addr=interno://0.0.0.0:29092,externo://0.0.0.0:9092
+        --advertise-kafka-addr=interno://broker:29092,externo://localhost:9092
+    environment:
+      # O rpk dentro do broker fala como admin, por TLS. Quem testa outro
+      # usuário passa -X user e -X pass na chamada.
+      RPK_USER: admin
+      RPK_PASS: ${FEIRA_KAFKA_SENHA_ADMIN:?defina a senha do admin do Kafka}
+      RPK_SASL_MECHANISM: SCRAM-SHA-256
+      RPK_TLS_ENABLED: "true"
+      RPK_TLS_CA: /certs/ca.crt
+    # Depois que a API de administração passa a exigir senha, a checagem de
+    # saúde também precisa se identificar.
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health -X user=admin -X pass=\"$$RPK_PASS\" | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - ./infra/kafka/certs:/certs:ro
+      - ./infra/kafka/bootstrap.yaml:/bootstrap/bootstrap.yaml:ro
+    # API de administração (9644) sem porta publicada; o Kafka só nesta máquina.
+    # !override troca a lista; !reset só zeraria e ignoraria o valor abaixo.
+    ports: !override
+      - "127.0.0.1:9092:9092"
+
+  servico-pedidos:
+    environment:
+      <<: *kafka-cliente
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="pedidos" password="${FEIRA_KAFKA_SENHA_PEDIDOS:?}";
+    volumes:
+      - ./infra/kafka/certs/ca.crt:/certs/ca.crt:ro
+
+  servico-estoque:
+    environment:
+      <<: *kafka-cliente
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="estoque" password="${FEIRA_KAFKA_SENHA_ESTOQUE:?}";
+    volumes:
+      - ./infra/kafka/certs/ca.crt:/certs/ca.crt:ro
+
+  servico-pagamentos:
+    environment:
+      <<: *kafka-cliente
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="pagamentos" password="${FEIRA_KAFKA_SENHA_PAGAMENTOS:?}";
+      # Na prova, todo pagamento passa: o que se mede aqui é o caminho das mensagens.
+      PERCENTUAL_DE_RECUSA: 0
+    volumes:
+      - ./infra/kafka/certs/ca.crt:/certs/ca.crt:ro
+
+  servico-consulta:
+    environment:
+      <<: *kafka-cliente
+      SPRING_KAFKA_PROPERTIES_SASL_JAAS_CONFIG: org.apache.kafka.common.security.scram.ScramLoginModule required username="consulta" password="${FEIRA_KAFKA_SENHA_CONSULTA:?}";
+    volumes:
+      - ./infra/kafka/certs/ca.crt:/certs/ca.crt:ro
+
+  # O console fala com o broker sem senha; no modo seguro ele fica de fora.
+  console:
+    profiles: ["desligado"]
