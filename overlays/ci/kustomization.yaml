@@ -5,7 +5,7 @@ kind: Kustomization
 # exemplo. No deploy de verdade a tag é a do commit; aqui, uma tag estável basta
 # para a política de imagem confiável deixar passar.
 resources:
-  - ../
+  - ../../k8s
 
 images:
   - name: ghcr.io/fabriciojunio/feira-servico-pedidos

@@ -26,7 +26,7 @@ preparar o diretório de dados.
   um `kubectl apply --dry-run=server` com os mesmos pods prova que o servidor de API recusa os
   ruins e aceita os corretos.
 
-## Por que existe `k8s/ci`
+## Por que existe `overlays/ci`
 
-A base usa `:latest` como exemplo de leitura. O overlay `k8s/ci` troca pela tag fixa, que é o que
+A base usa `:latest` como exemplo de leitura. O overlay `overlays/ci` troca pela tag fixa, que é o que
 um deploy de verdade faz com a tag do commit, e é ele que o cluster recebe.
