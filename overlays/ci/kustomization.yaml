@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# O que o cluster recebe de fato: a base com a tag fixa no lugar do :latest de
+# exemplo. No deploy de verdade a tag é a do commit; aqui, uma tag estável basta
+# para a política de imagem confiável deixar passar.
+resources:
+  - ../../k8s
+
+images:
+  - name: ghcr.io/fabriciojunio/feira-servico-pedidos
+    newTag: "0.1.0"
+  - name: ghcr.io/fabriciojunio/feira-servico-estoque
+    newTag: "0.1.0"
+  - name: ghcr.io/fabriciojunio/feira-servico-pagamentos
+    newTag: "0.1.0"
+  - name: ghcr.io/fabriciojunio/feira-servico-consulta
+    newTag: "0.1.0"
