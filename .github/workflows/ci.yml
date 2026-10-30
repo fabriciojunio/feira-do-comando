@@ -152,6 +152,9 @@ jobs:
       - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
         with:
           terraform_version: 1.9.8
+          # O wrapper acrescenta texto à saída e quebraria o "terraform output -json"
+          # que o teste do módulo de estado lê.
+          terraform_wrapper: false
 
       - name: Formatacao
         run: terraform fmt -check -recursive infra
@@ -165,6 +168,16 @@ jobs:
         run: |
           terraform init -backend=false -input=false
           terraform validate
+
+      # validate não diz se o código faz o que promete. O módulo do estado é
+      # aplicado de verdade no moto, emulador aberto da AWS, e cada controle
+      # (versionamento, KMS, bloqueio público, TLS, rotação, trava) é conferido
+      # pela API. Custo zero, e nada sai da máquina do runner.
+      - name: Aplicar o módulo de estado num emulador e conferir os controles
+        run: |
+          python3 -m venv "$RUNNER_TEMP/moto"
+          "$RUNNER_TEMP/moto/bin/pip" install --quiet --require-hashes -r infra/estado/requisitos.txt
+          "$RUNNER_TEMP/moto/bin/python" infra/estado/testar_no_emulador.py
 
   cluster:
     name: Kubernetes num cluster de verdade

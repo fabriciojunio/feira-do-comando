@@ -1,0 +1,2 @@
+moto[server,s3,dynamodb]==5.2.4
+boto3
