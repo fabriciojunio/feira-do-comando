@@ -1,0 +1,41 @@
+# Só sobe imagem de origem conhecida e com tag fixa. Tag :latest muda por baixo
+# sem ninguém saber, e então não dá para dizer o que está rodando nem voltar
+# atrás. Imagem de registro desconhecido é o atalho mais curto de um atacante
+# com permissão de deploy.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: imagem-confiavel
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: namespace-da-feira
+      expression: "object.metadata.namespace == 'feira'"
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets]
+  variables:
+    - name: imagens
+      expression: >-
+        (object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : []))
+          .map(c, c.image)
+    # A tag é o que vem depois do último ":" do último segmento; porta de
+    # registro (host:5000/imagem) não conta como tag.
+    - name: tag
+      expression: "variables.imagens.map(i, i.split('/')[i.split('/').size() - 1])"
+  validations:
+    - expression: >-
+        variables.imagens.all(i,
+          i.startsWith('ghcr.io/fabriciojunio/') ||
+          ['postgres', 'mongo', 'redpandadata/redpanda'].exists(r,
+            i.startsWith(r + ':') || i.startsWith(r + '@')))
+      message: "Imagem fora da lista: ghcr.io/fabriciojunio, postgres, mongo e redpanda."
+    - expression: >-
+        variables.tag.all(t, t.contains('@sha256:') || (t.contains(':') && !t.endsWith(':latest')))
+      message: "Imagem precisa de tag fixa ou digest; :latest e imagem sem tag não passam."

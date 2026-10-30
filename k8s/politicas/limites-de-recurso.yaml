@@ -1,0 +1,27 @@
+# Contêiner sem limite de memória derruba o nó inteiro quando vaza, e sem
+# request o agendador não sabe onde colocá-lo.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: limites-de-recurso
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: namespace-da-feira
+      expression: "object.metadata.namespace == 'feira'"
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets]
+  validations:
+    - expression: >-
+        object.spec.containers.all(c,
+          has(c.resources) &&
+          has(c.resources.requests) && 'cpu' in c.resources.requests && 'memory' in c.resources.requests &&
+          has(c.resources.limits) && 'memory' in c.resources.limits)
+      message: "Todo contêiner precisa de requests de CPU e memória e de limite de memória."

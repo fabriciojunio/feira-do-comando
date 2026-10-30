@@ -1,0 +1,43 @@
+# Nenhum pod do namespace sobe com privilégio, com acesso ao host ou podendo
+# ganhar privilégio depois de subir. É o "baseline" do Pod Security Standards
+# mais o seccomp, cobrado na admissão e não só no papel.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: sem-privilegio
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: namespace-da-feira
+      expression: "object.metadata.namespace == 'feira'"
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets]
+  variables:
+    - name: conteineres
+      expression: "object.spec.containers + (has(object.spec.initContainers) ? object.spec.initContainers : [])"
+  validations:
+    - expression: >-
+        !(has(object.spec.hostNetwork) && object.spec.hostNetwork) &&
+        !(has(object.spec.hostPID) && object.spec.hostPID) &&
+        !(has(object.spec.hostIPC) && object.spec.hostIPC)
+      message: "Pod não pode usar a rede, os processos ou o IPC do host."
+    - expression: >-
+        variables.conteineres.all(c,
+          !(has(c.securityContext) && has(c.securityContext.privileged) && c.securityContext.privileged))
+      message: "Contêiner privilegiado não é permitido."
+    - expression: >-
+        object.spec.containers.all(c,
+          has(c.securityContext) && has(c.securityContext.allowPrivilegeEscalation) &&
+          c.securityContext.allowPrivilegeEscalation == false)
+      message: "Todo contêiner precisa de allowPrivilegeEscalation: false."
+    - expression: >-
+        has(object.spec.securityContext) && has(object.spec.securityContext.seccompProfile) &&
+        object.spec.securityContext.seccompProfile.type == 'RuntimeDefault'
+      message: "O pod precisa do perfil seccomp RuntimeDefault."

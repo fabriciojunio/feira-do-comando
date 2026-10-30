@@ -1,0 +1,22 @@
+apiVersion: cli.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: politicas-da-feira
+policies:
+  - ../sem-privilegio.yaml
+  - ../limites-de-recurso.yaml
+  - ../imagem-confiavel.yaml
+  - ../servico-restrito.yaml
+resources:
+  - recursos.yaml
+results:
+  # O que tem de passar em todas.
+  - {policy: sem-privilegio, kind: Pod, resources: [servico-correto, digest-fixo], result: pass}
+  - {policy: limites-de-recurso, kind: Pod, resources: [servico-correto, digest-fixo], result: pass}
+  - {policy: imagem-confiavel, kind: Pod, resources: [servico-correto, digest-fixo], result: pass}
+  - {policy: servico-restrito, kind: Pod, resources: [servico-correto], result: pass}
+  # Cada caso quebra uma regra.
+  - {policy: sem-privilegio, kind: Pod, resources: [rede-do-host, privilegiado, sem-seccomp], result: fail}
+  - {policy: limites-de-recurso, kind: Pod, resources: [sem-limite], result: fail}
+  - {policy: imagem-confiavel, kind: Pod, resources: [registro-estranho, tag-latest, sem-tag], result: fail}
+  - {policy: servico-restrito, kind: Pod, resources: [servico-como-root], result: fail}
