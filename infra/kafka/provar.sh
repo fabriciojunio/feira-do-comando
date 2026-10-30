@@ -156,7 +156,7 @@ verificar "API de administração não tem porta publicada" \
 certificado_valido() {
   echo | openssl s_client -connect 127.0.0.1:9092 -CAfile "$CERTS/ca.crt" -servername localhost \
     -verify_hostname localhost > /tmp/tls.txt 2>&1 || true
-  grep -E "subject=|issuer=|Verify return code|verify error" /tmp/tls.txt | sed 's/^/       /'
+  grep -E "subject=|issuer=|Verify return code|verify error|errno|error" /tmp/tls.txt | head -8 | sed 's/^/       /'
   grep -q "Verify return code: 0 (ok)" /tmp/tls.txt
 }
 verificar "o broker apresenta certificado válido da CA da Feira, para o nome certo" certificado_valido
@@ -175,13 +175,18 @@ id=$(curl -fsS -X POST http://localhost:8081/api/v1/pedidos -H 'Content-Type: ap
   -d '{"itens":[{"sku":"PROVA-KAFKA","descricao":"Produto da prova","quantidade":1,"precoUnitario":"29.90"}]}' \
   | python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])')
 status=""
-for _ in $(seq 1 60); do
+for _ in $(seq 1 90); do
   status=$(curl -fsS "http://localhost:8081/api/v1/pedidos/$id" -H "X-Cliente-Id: $cliente" \
     | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
   [ "$status" = CONFIRMADO ] && break
   sleep 2
 done
-[ "$status" = CONFIRMADO ] || { echo "       tópicos no broker:"; rpk topic list 2>&1 | sed 's/^/       /'; }
+if [ "$status" != CONFIRMADO ]; then
+  for servico in servico-pagamentos servico-pedidos; do
+    echo "       --- $servico"
+    "${COMPOSE[@]}" logs --no-color --tail=25 "$servico" 2>&1 | cut -c1-220 | sed 's/^/       /'
+  done
+fi
 verificar "o pedido passou por estoque e pagamento e foi confirmado (status: $status)" [ "$status" = CONFIRMADO ]
 
 projetado=1
