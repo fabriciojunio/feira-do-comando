@@ -1,0 +1,24 @@
+title: Mensagem travada no outbox
+id: f4542b52-0f51-5b33-bd59-8fa8f02cce56
+status: test
+description: >-
+  Uma mensagem esgotou as tentativas de publicação. O pedido dela não anda; se várias travam juntas, o broker está fora ou recusando.
+references:
+  - https://github.com/fabriciojunio/feira-do-comando/blob/produção/deteccao/runbooks.md#feira-mensagem-travada-no-outbox
+author: Fabrício Júnio
+date: 2026-10-30
+tags:
+  - attack.impact
+  - attack.t1499
+logsource:
+  category: application
+  product: feira-do-comando
+detection:
+  selecao:
+    message|contains|all:
+      - 'esgotou'
+      - 'tentativas e ficou travada'
+  condition: selecao
+falsepositives:
+  - ver o runbook
+level: medium

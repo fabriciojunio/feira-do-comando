@@ -1,0 +1,71 @@
+# Detecção em tempo de execução para os contêineres da Feira (Falco).
+#
+# As políticas do Kyverno decidem o que pode subir; estas regras olham o que
+# acontece depois que subiu. Usam as macros do conjunto padrão do Falco
+# (spawned_process, container, open_read, open_write, outbound), por isso são
+# carregadas junto com o falco_rules.yaml.
+
+- list: feira_imagens_de_servico
+  items:
+    - ghcr.io/fabriciojunio/feira-servico-pedidos
+    - ghcr.io/fabriciojunio/feira-servico-estoque
+    - ghcr.io/fabriciojunio/feira-servico-pagamentos
+    - ghcr.io/fabriciojunio/feira-servico-consulta
+
+- list: feira_imagens_de_banco
+  items: [postgres, docker.io/library/postgres, mongo, docker.io/library/mongo]
+
+- macro: feira_servico
+  condition: (container and container.image.repository in (feira_imagens_de_servico))
+
+- macro: feira_banco
+  condition: (container and container.image.repository in (feira_imagens_de_banco))
+
+- list: feira_shells
+  items: [sh, bash, ash, dash, zsh, ksh, busybox]
+
+# O serviço é uma JVM e não tem motivo para abrir shell. Shell aqui é alguém
+# dentro do contêiner, por exec ou por execução remota de código.
+- rule: Feira - shell em contêiner de serviço
+  desc: Um processo de shell começou dentro de um contêiner de serviço da Feira.
+  condition: spawned_process and feira_servico and proc.name in (feira_shells)
+  output: >-
+    Shell em contêiner da Feira (imagem=%container.image.repository processo=%proc.name
+    pai=%proc.pname comando=%proc.cmdline usuario=%user.name contêiner=%container.name)
+  priority: WARNING
+  tags: [feira, mitre_execution, T1059]
+
+- rule: Feira - leitura de credencial do sistema
+  desc: Um contêiner da Feira leu arquivo de senha ou de sudo do sistema.
+  condition: open_read and (feira_servico or feira_banco) and fd.name in (/etc/shadow, /etc/gshadow, /etc/sudoers)
+  output: >-
+    Leitura de arquivo sensível em contêiner da Feira (arquivo=%fd.name processo=%proc.name
+    comando=%proc.cmdline imagem=%container.image.repository)
+  priority: ERROR
+  tags: [feira, mitre_credential_access, T1003.008]
+
+# Banco de dados só fala com os serviços, dentro do cluster. Conexão saindo
+# para endereço público é exfiltração ou um contêiner comprometido.
+- rule: Feira - banco abrindo conexão para fora
+  desc: Um banco da Feira abriu conexão para endereço fora das redes privadas.
+  condition: >-
+    outbound and feira_banco and
+    not fd.snet in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8")
+  output: >-
+    Banco da Feira conectando para fora (destino=%fd.sip:%fd.sport processo=%proc.name
+    imagem=%container.image.repository)
+  priority: WARNING
+  tags: [feira, mitre_exfiltration, T1041]
+
+# A raiz dos serviços é somente leitura; se mesmo assim algo grava binário,
+# alguém trocou a política ou montou volume onde não devia.
+- rule: Feira - gravação em diretório de binários
+  desc: Um contêiner da Feira gravou arquivo em diretório de executáveis.
+  condition: >-
+    open_write and (feira_servico or feira_banco) and
+    fd.directory in (/bin, /sbin, /usr/bin, /usr/sbin, /usr/local/bin)
+  output: >-
+    Gravação em diretório de binários na Feira (arquivo=%fd.name processo=%proc.name
+    imagem=%container.image.repository)
+  priority: ERROR
+  tags: [feira, mitre_persistence, T1543]

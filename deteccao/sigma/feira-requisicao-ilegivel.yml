@@ -1,0 +1,22 @@
+title: Requisição ilegível na API de pedidos
+id: e4f9ef64-a497-5e0c-a3fe-0537b9111cd3
+status: test
+description: >-
+  Corpo que não é JSON válido ou tem tipo errado. Uma por vez é erro de cliente; em sequência, do mesmo IP, é varredura ou fuzzing.
+references:
+  - https://github.com/fabriciojunio/feira-do-comando/blob/produção/deteccao/runbooks.md#feira-requisicao-ilegivel
+author: Fabrício Júnio
+date: 2026-10-30
+tags:
+  - attack.reconnaissance
+  - attack.t1595.002
+logsource:
+  category: application
+  product: feira-do-comando
+detection:
+  selecao:
+    message|contains: 'Requisicao ilegivel em'
+  condition: selecao
+falsepositives:
+  - ver o runbook
+level: low

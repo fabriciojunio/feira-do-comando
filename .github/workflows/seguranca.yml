@@ -116,6 +116,27 @@ jobs:
             sbom.cdx.json
           retention-days: 90
 
+  deteccao:
+    name: Detecção como código (Sigma e Falco)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Cada regra Sigma vira SQL e roda contra logs no formato exato dos
+      # serviços: o teste prova que ela pega o que deve e não pega o ruído.
+      - name: Testar as regras Sigma
+        run: |
+          python3 -m venv "$RUNNER_TEMP/sigma"
+          "$RUNNER_TEMP/sigma/bin/pip" install --quiet --require-hashes -r deteccao/requisitos.txt
+          "$RUNNER_TEMP/sigma/bin/python" -m unittest deteccao/test_regras_sigma.py -v
+      # O Falco carrega as regras junto com o conjunto padrão, de onde vêm as
+      # macros, e recusa campo, macro ou lista que não existam.
+      - name: Validar as regras do Falco
+        run: |
+          docker run --rm -v "$PWD/deteccao/falco:/regras:ro"             falcosecurity/falco:0.45.1@sha256:69e957f91b3a6beb5c82e2afae33ec3e4479dab2d4421475d288d0cd113cedf6             falco -V /etc/falco/falco_rules.yaml -V /regras/regras-feira.yaml
+
   semgrep:
     name: Análise estática (Semgrep, regras próprias)
     runs-on: ubuntu-latest

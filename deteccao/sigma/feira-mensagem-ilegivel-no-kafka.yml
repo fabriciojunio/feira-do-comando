@@ -1,0 +1,24 @@
+title: Mensagem ilegível no Kafka
+id: e4fdc2de-8a60-55a0-bd66-f68e19a48d19
+status: test
+description: >-
+  Um consumidor recebeu do broker uma mensagem que não segue o contrato. Ou um produtor está com defeito, ou alguém com acesso ao broker está injetando mensagem.
+references:
+  - https://github.com/fabriciojunio/feira-do-comando/blob/produção/deteccao/runbooks.md#feira-mensagem-ilegivel-no-kafka
+author: Fabrício Júnio
+date: 2026-10-30
+tags:
+  - attack.initial_access
+  - attack.t1195
+logsource:
+  category: application
+  product: feira-do-comando
+detection:
+  selecao:
+    message|contains:
+      - 'Mensagem ilegivel no topico'
+      - 'Evento ilegivel em'
+  condition: selecao
+falsepositives:
+  - ver o runbook
+level: high
