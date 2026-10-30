@@ -204,7 +204,14 @@ jobs:
       - name: Aplicar as políticas de admissão
         run: |
           kubectl apply -f k8s/namespace.yaml
-          kubectl apply -k k8s/politicas/
+          # O helm --wait volta com os pods prontos, mas o webhook que valida as
+          # próprias políticas ainda pode estar subindo: tenta de novo até ele
+          # responder, em vez de depender da sorte do tempo.
+          for tentativa in $(seq 1 36); do
+            kubectl apply -k k8s/politicas/ && break
+            [ "$tentativa" = 36 ] && { echo "::error::O Kyverno não aceitou as políticas em 3 minutos."; exit 1; }
+            sleep 5
+          done
           # Pronta é quando o servidor de API passa a recusar citando a política:
           # até o webhook ser registrado, o pod privilegiado ainda seria aceito.
           # Recusa por outro motivo (namespace inexistente, por exemplo) não conta.
