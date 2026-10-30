@@ -128,8 +128,14 @@ verificar "pedidos não entra no grupo de consumo do estoque" \
   recusado "$NEGADO" como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic consume feira.estoque -n 1 --group feira-estoque -o start
 verificar "serviço não cria tópico" \
   recusado "$NEGADO" como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic create feira.invasor
-verificar "serviço não apaga tópico de outro" \
-  recusado "$NEGADO" como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic delete feira.pagamentos
+# O rpk topic delete sai com código 0 mesmo quando o broker nega; o que prova
+# é a negação na saída e o tópico continuar existindo depois da tentativa.
+apagar_e_conferir() {
+  como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic delete feira.pagamentos > /tmp/saida.txt 2>&1 || true
+  echo "       resposta: $(tr '\n' ' ' < /tmp/saida.txt | cut -c1-150)"
+  grep -q "$NEGADO" /tmp/saida.txt && rpk topic describe feira.pagamentos > /dev/null
+}
+verificar "serviço não apaga tópico de outro (e o tópico continua lá)" apagar_e_conferir
 verificar "senha errada é recusada" \
   recusado "SASL|authentication" como pedidos "senha-errada" topic describe feira.pedidos
 verificar "conexão sem SASL é recusada" \
@@ -141,14 +147,17 @@ verificar "conexão sem TLS é recusada" \
   rpk topic describe feira.pedidos -X user=admin -X pass="$FEIRA_KAFKA_SENHA_ADMIN" -X sasl.mechanism=SCRAM-SHA-256
 admin_sem_senha() {
   "${COMPOSE[@]}" exec -T broker bash -c 'exec 3<>/dev/tcp/127.0.0.1/9644
-    printf "GET /v1/security/users HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; head -1 <&3'
+    printf "GET /v1/security/users HTTP/1.0\r\nHost: localhost\r\n\r\n" >&3; head -1 <&3' \
+    | tee /dev/stderr | grep -qE " 40[13] "
 }
-verificar "API de administração sem senha responde 401 ou 403" bash -c "$(declare -f admin_sem_senha); COMPOSE=(${COMPOSE[*]}); admin_sem_senha | grep -E ' 40[13] '"
+verificar "API de administração sem senha responde 401 ou 403" admin_sem_senha
 verificar "API de administração não tem porta publicada" \
   recusado "refused" bash -c "exec 3<>/dev/tcp/127.0.0.1/9644"
 certificado_valido() {
   echo | openssl s_client -connect 127.0.0.1:9092 -CAfile "$CERTS/ca.crt" -servername localhost \
-    -verify_hostname localhost 2>/dev/null | grep -q "Verify return code: 0 (ok)"
+    -verify_hostname localhost > /tmp/tls.txt 2>&1 || true
+  grep -E "subject=|issuer=|Verify return code|verify error" /tmp/tls.txt | sed 's/^/       /'
+  grep -q "Verify return code: 0 (ok)" /tmp/tls.txt
 }
 verificar "o broker apresenta certificado válido da CA da Feira, para o nome certo" certificado_valido
 
@@ -172,6 +181,7 @@ for _ in $(seq 1 60); do
   [ "$status" = CONFIRMADO ] && break
   sleep 2
 done
+[ "$status" = CONFIRMADO ] || { echo "       tópicos no broker:"; rpk topic list 2>&1 | sed 's/^/       /'; }
 verificar "o pedido passou por estoque e pagamento e foi confirmado (status: $status)" [ "$status" = CONFIRMADO ]
 
 projetado=1
