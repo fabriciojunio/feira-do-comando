@@ -30,10 +30,16 @@ resource "aws_db_instance" "servico" {
   max_allocated_storage = 50
   storage_type          = "gp3"
   storage_encrypted     = true
+  kms_key_id            = aws_kms_key.dados.arn
 
   db_name  = "feira_${each.key}"
   username = "feira"
-  password = var.senha_do_banco
+
+  # A senha mestre nasce e gira dentro do Secrets Manager, cifrada pela chave
+  # própria. Antes ela vinha de variável, e um apply a gravava em texto claro
+  # no estado do Terraform; agora ela não passa nem pelo estado.
+  manage_master_user_password   = true
+  master_user_secret_kms_key_id = aws_kms_key.dados.key_id
 
   db_subnet_group_name   = aws_db_subnet_group.privado.name
   vpc_security_group_ids = [aws_security_group.banco.id]

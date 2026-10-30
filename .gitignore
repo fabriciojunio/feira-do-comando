@@ -14,6 +14,8 @@ web/node_modules/
 # O estado guarda valor sensivel em texto claro, inclusive senha de banco.
 infra/.terraform/
 infra/.terraform.lock.hcl
+infra/estado/.terraform/
+infra/estado/.terraform.lock.hcl
 *.tfstate
 *.tfstate.*
 *.tfvars

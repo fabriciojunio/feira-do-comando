@@ -33,12 +33,6 @@ variable "classe_do_banco" {
   default     = "db.t4g.micro"
 }
 
-variable "senha_do_banco" {
-  description = "Senha mestre do PostgreSQL. Vem de variavel de ambiente, nunca do arquivo."
-  type        = string
-  sensitive   = true
-}
-
 variable "servicos" {
   description = "Os servicos que ganham banco proprio. Um banco por servico e o ponto do desenho."
   type        = list(string)

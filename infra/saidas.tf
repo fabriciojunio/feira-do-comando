@@ -17,3 +17,8 @@ output "id_da_vpc" {
   description = "Id da VPC, util para anexar recursos criados fora deste modulo."
   value       = aws_vpc.principal.id
 }
+
+output "segredo_da_senha_dos_bancos" {
+  description = "ARN do segredo com a senha mestre de cada banco, no Secrets Manager. O serviço lê dali, nunca de variável."
+  value       = { for nome, banco in aws_db_instance.servico : nome => banco.master_user_secret[0].secret_arn }
+}

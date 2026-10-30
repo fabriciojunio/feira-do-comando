@@ -1,0 +1,9 @@
+# Depois de aplicar infra/estado, o resto da infraestrutura usa:
+#   terraform init -backend-config=estado/backend.hcl
+# com os valores das saídas do módulo de estado.
+bucket         = "feira-tfstate-<id-da-conta>"
+key            = "feira/terraform.tfstate"
+region         = "us-east-1"
+encrypt        = true
+kms_key_id     = "<arn-da-chave-saida-chave>"
+dynamodb_table = "feira-tfstate-trava"

@@ -1,0 +1,22 @@
+title: Erro inesperado na API de pedidos
+id: 1d8d9646-0538-5a18-9fe6-2a5553a4a4de
+status: test
+description: >-
+  Exceção que nenhum tratador previu. A resposta ao cliente é genérica; o identificador no log liga o relato do usuário ao rastro completo.
+references:
+  - https://github.com/fabriciojunio/feira-do-comando/blob/produção/deteccao/runbooks.md#feira-erro-inesperado
+author: Fabrício Júnio
+date: 2026-10-30
+tags:
+  - attack.initial_access
+  - attack.t1190
+logsource:
+  category: application
+  product: feira-do-comando
+detection:
+  selecao:
+    message|contains: 'Erro inesperado ['
+  condition: selecao
+falsepositives:
+  - ver o runbook
+level: medium

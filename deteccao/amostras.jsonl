@@ -1,0 +1,11 @@
+{"id": 1, "service": "servico-pedidos", "level": "ERROR", "message": "Mensagem ilegivel no topico pagamentos.eventos com chave 7d1f. Vai para a fila de mensagens mortas.", "espera": ["feira-mensagem-ilegivel-no-kafka"]}
+{"id": 2, "service": "servico-estoque", "level": "ERROR", "message": "Evento ilegivel em pedidos.eventos com chave 41aa", "espera": ["feira-mensagem-ilegivel-no-kafka"]}
+{"id": 3, "service": "servico-pedidos", "level": "INFO", "message": "Requisicao ilegivel em POST /pedidos: JSON parse error", "espera": ["feira-requisicao-ilegivel"]}
+{"id": 4, "service": "servico-pedidos", "level": "ERROR", "message": "Erro inesperado [b3e9c2d1] em GET /pedidos/9f0e", "espera": ["feira-erro-inesperado"]}
+{"id": 5, "service": "servico-pagamentos", "level": "ERROR", "message": "Mensagem 18 do tipo PagamentoAprovado esgotou 10 tentativas e ficou travada. Conferir o broker.", "espera": ["feira-mensagem-travada-no-outbox"]}
+{"id": 6, "service": "servico-pedidos", "level": "INFO", "message": "Pedido 9f0e agora em CONFIRMADO: pagamento aprovado", "espera": []}
+{"id": 7, "service": "servico-estoque", "level": "INFO", "message": "Pedido 9f0e reservado com 3 SKUs", "espera": []}
+{"id": 8, "service": "servico-pagamentos", "level": "WARN", "message": "Falha ao publicar PagamentoAprovado (2a tentativa): broker indisponivel", "espera": []}
+{"id": 9, "service": "servico-pedidos", "level": "WARN", "message": "Evento PagamentoAprovado chegou antes do PedidoCriado do pedido 12. Ignorando.", "espera": []}
+{"id": 10, "service": "servico-pagamentos", "level": "INFO", "message": "Cobranca do pedido 12 recusada: saldo insuficiente", "espera": []}
+{"id": 11, "service": "servico-pedidos", "level": "ERROR", "message": "Varredura de saga falhou", "espera": []}
