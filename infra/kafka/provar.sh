@@ -53,7 +53,12 @@ chmod 644 "$CERTS"/*
 rm -f "$CERTS/ca.key" "$CERTS/broker.csr"
 
 "${COMPOSE[@]}" up -d --wait --wait-timeout 180 broker
-rpk() { "${COMPOSE[@]}" exec -T broker rpk "$@"; }
+# Opções explícitas: dentro do contêiner, as variáveis RPK_* não bastaram para o
+# rpk fazer SASL (o broker respondia ILLEGAL_SASL_STATE).
+CONEXAO=(-X sasl.mechanism=SCRAM-SHA-256 -X tls.enabled=true -X tls.ca=/certs/ca.crt)
+rpk() { "${COMPOSE[@]}" exec -T broker rpk "$@" -X user=admin -X pass="$FEIRA_KAFKA_SENHA_ADMIN" "${CONEXAO[@]}"; }
+echo "Diagnóstico do rpk no broker:"
+"${COMPOSE[@]}" exec -T broker bash -c 'env | grep ^RPK_ | sed "s/^RPK_PASS=.*/RPK_PASS=***/"; rpk profile print 2>&1 | grep -vi pass' || true
 
 echo "Usuários, tópicos e permissões"
 rpk security user create admin -p "$FEIRA_KAFKA_SENHA_ADMIN" --mechanism SCRAM-SHA-256 > /dev/null
@@ -93,27 +98,27 @@ done
 
 como() { # usuário senha comando...
   local usuario=$1 senha=$2; shift 2
-  "${COMPOSE[@]}" exec -T broker rpk "$@" -X user="$usuario" -X pass="$senha"
+  "${COMPOSE[@]}" exec -T broker rpk "$@" -X user="$usuario" -X pass="$senha" "${CONEXAO[@]}"
 }
 
 echo
 echo "Acessos que precisam passar (controle: sem isso, as recusas abaixo não provam nada)"
-publica_pedidos() { echo controle | "${COMPOSE[@]}" exec -T broker rpk topic produce feira.pedidos -k controle   -X user=pedidos -X pass="$FEIRA_KAFKA_SENHA_PEDIDOS" > /dev/null; }
+publica_pedidos() { echo controle | "${COMPOSE[@]}" exec -T broker rpk topic produce feira.pedidos -k controle   -X user=pedidos -X pass="$FEIRA_KAFKA_SENHA_PEDIDOS" "${CONEXAO[@]}" > /dev/null; }
 verificar "pedidos publica no próprio tópico, com TLS e SASL" publica_pedidos
 le_pedidos() { como estoque "$FEIRA_KAFKA_SENHA_ESTOQUE" topic consume feira.pedidos -n 1 --group feira-estoque -o start   | grep -q controle; }
 verificar "estoque lê o tópico de pedidos com o grupo dele" le_pedidos
 
 echo
 echo "Acessos que não podem passar"
-verificar "estoque não publica no tópico de pedidos" recusado bash -c "echo x | ${COMPOSE[*]} exec -T broker rpk topic produce feira.pedidos -X user=estoque -X pass=$FEIRA_KAFKA_SENHA_ESTOQUE"
-verificar "consulta, que só lê, não publica em tópico nenhum de negócio" recusado bash -c "echo x | ${COMPOSE[*]} exec -T broker rpk topic produce feira.pedidos -X user=consulta -X pass=$FEIRA_KAFKA_SENHA_CONSULTA"
+verificar "estoque não publica no tópico de pedidos" recusado bash -c "echo x | ${COMPOSE[*]} exec -T broker rpk topic produce feira.pedidos -X user=estoque -X pass=$FEIRA_KAFKA_SENHA_ESTOQUE ${CONEXAO[*]}"
+verificar "consulta, que só lê, não publica em tópico nenhum de negócio" recusado bash -c "echo x | ${COMPOSE[*]} exec -T broker rpk topic produce feira.pedidos -X user=consulta -X pass=$FEIRA_KAFKA_SENHA_CONSULTA ${CONEXAO[*]}"
 verificar "estoque não lê o tópico de pagamentos" recusado como estoque "$FEIRA_KAFKA_SENHA_ESTOQUE" topic consume feira.pagamentos -n 1 --group feira-estoque -o start
 verificar "pedidos não entra no grupo de consumo do estoque" recusado como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic consume feira.estoque -n 1 --group feira-estoque -o start
 verificar "serviço não cria tópico" recusado como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic create feira.invasor
 verificar "serviço não apaga tópico de outro" recusado como pedidos "$FEIRA_KAFKA_SENHA_PEDIDOS" topic delete feira.pagamentos
 verificar "senha errada é recusada" recusado como pedidos "senha-errada" topic describe feira.pedidos
-verificar "conexão sem SASL é recusada" recusado "${COMPOSE[@]}" exec -T broker env -u RPK_USER -u RPK_PASS -u RPK_SASL_MECHANISM rpk topic describe feira.pedidos
-verificar "conexão sem TLS é recusada" recusado "${COMPOSE[@]}" exec -T broker rpk topic describe feira.pedidos -X tls.enabled=false
+verificar "conexão sem SASL é recusada" recusado "${COMPOSE[@]}" exec -T broker env -u RPK_USER -u RPK_PASS -u RPK_SASL_MECHANISM rpk topic describe feira.pedidos -X tls.enabled=true -X tls.ca=/certs/ca.crt
+verificar "conexão sem TLS é recusada" recusado "${COMPOSE[@]}" exec -T broker rpk topic describe feira.pedidos -X user=admin -X pass="$FEIRA_KAFKA_SENHA_ADMIN" -X sasl.mechanism=SCRAM-SHA-256 -X tls.enabled=false
 verificar "API de administração sem senha é recusada" recusado "${COMPOSE[@]}" exec -T broker env -u RPK_USER -u RPK_PASS rpk security user list
 verificar "API de administração não tem porta publicada" recusado bash -c "exec 3<>/dev/tcp/127.0.0.1/9644"
 certificado_valido() {

@@ -36,6 +36,13 @@ services:
       RPK_SASL_MECHANISM: SCRAM-SHA-256
       RPK_TLS_ENABLED: "true"
       RPK_TLS_CA: /certs/ca.crt
+    # Depois que a API de administração passa a exigir senha, a checagem de
+    # saúde também precisa se identificar.
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health -X user=admin -X pass=\"$$RPK_PASS\" | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
     volumes:
       - ./infra/kafka/certs:/certs:ro
       - ./infra/kafka/bootstrap.yaml:/bootstrap/bootstrap.yaml:ro
