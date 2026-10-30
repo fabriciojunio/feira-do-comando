@@ -303,6 +303,14 @@ IAST and RASP need a paid JVM agent, and what they would add here is small: ther
 user data, and the input boundary already has validation, contract tests and ZAP. The CI runner is
 GitHub Actions; Jenkins or GitLab CI would run the same pipeline with the same tools.
 
+### Program metrics
+
+The [program dashboard](docs/seguranca/programa.en.md) gathers findings from every repository in the
+portfolio into one register and shows decision makers the time to fix by severity, how much stayed
+within the deadline, what is open, the false positive rate and exceptions about to expire. The
+result from 30/10/2026 is in [`metricas.md`](docs/seguranca/metricas.md), including what went
+badly: critical findings took 17 days to fix, against a 7-day deadline.
+
 ## What is not here
 
 Said upfront rather than discovered later:

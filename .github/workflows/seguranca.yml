@@ -80,6 +80,13 @@ jobs:
       # falha que o OSV não aceitou.
       - name: Testar o conversor de aceites
         run: python3 -m unittest scripts/test_aceites_para_grype.py -v
+      # O painel do programa sai do registro de achados; registro inconsistente
+      # (fechado sem data, severidade desconhecida) reprova aqui.
+      - name: Métricas do programa
+        run: |
+          python3 -m unittest scripts/test_metricas_do_programa.py -v
+          python3 scripts/metricas_do_programa.py docs/seguranca/achados.csv \
+            --aceites feira-do-comando=osv-scanner.toml >> "$GITHUB_STEP_SUMMARY"
       # O SBOM sai dos jars de verdade, com as transitivas que vão para a imagem.
       - name: Empacotar os serviços
         run: mvn -B -q package -DskipTests

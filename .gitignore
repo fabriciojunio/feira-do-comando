@@ -27,3 +27,6 @@ sbom.*.json
 
 # Certificados de teste gerados pelo infra/kafka/provar.sh a cada execução.
 infra/kafka/certs/
+
+# Cache do Python gerado ao rodar os testes dos scripts.
+__pycache__/
