@@ -1,0 +1,40 @@
+# Os serviços próprios seguem o perfil "restricted": não rodam como root, não
+# escrevem no próprio sistema de arquivos, não têm capability nenhuma e não
+# recebem token da API do Kubernetes. Os bancos ficam de fora: a imagem oficial
+# do Postgres precisa começar como root para preparar o diretório de dados.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: servico-restrito
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: servico-da-feira
+      expression: >-
+        object.metadata.namespace == 'feira' &&
+        has(object.metadata.labels) && 'app' in object.metadata.labels &&
+        object.metadata.labels['app'].startsWith('servico-')
+  autogen:
+    podControllers:
+      controllers: [deployments, statefulsets]
+  validations:
+    - expression: >-
+        has(object.spec.automountServiceAccountToken) && object.spec.automountServiceAccountToken == false
+      message: "Serviço da aplicação não recebe token da API do Kubernetes."
+    - expression: >-
+        has(object.spec.securityContext) && has(object.spec.securityContext.runAsNonRoot) &&
+        object.spec.securityContext.runAsNonRoot == true
+      message: "Serviço da aplicação não roda como root."
+    - expression: >-
+        object.spec.containers.all(c,
+          has(c.securityContext) &&
+          has(c.securityContext.readOnlyRootFilesystem) && c.securityContext.readOnlyRootFilesystem == true &&
+          has(c.securityContext.capabilities) && has(c.securityContext.capabilities.drop) &&
+          'ALL' in c.securityContext.capabilities.drop)
+      message: "Serviço da aplicação precisa de raiz somente leitura e de drop ALL nas capabilities."

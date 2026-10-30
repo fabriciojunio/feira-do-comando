@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Políticas de admissão do Kyverno. Vão para o cluster antes da aplicação:
+# o que não passa aqui não chega a existir.
+resources:
+  - sem-privilegio.yaml
+  - limites-de-recurso.yaml
+  - imagem-confiavel.yaml
+  - servico-restrito.yaml

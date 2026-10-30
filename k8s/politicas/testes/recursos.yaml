@@ -1,0 +1,128 @@
+# Um pod para cada coisa que as políticas têm de barrar, e um que tem de passar.
+# Base comum: tudo certo; cada caso quebra uma regra só.
+apiVersion: v1
+kind: Pod
+metadata:
+  name: servico-correto
+  namespace: feira
+  labels: {app: servico-pedidos}
+spec:
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    seccompProfile: {type: RuntimeDefault}
+  containers:
+    - name: app
+      image: ghcr.io/fabriciojunio/feira-servico-pedidos:0.1.0
+      resources:
+        requests: {cpu: 100m, memory: 256Mi}
+        limits: {memory: 512Mi}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: rede-do-host, namespace: feira}
+spec:
+  hostNetwork: true
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: postgres:16-alpine
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: privilegiado, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: postgres:16-alpine
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {privileged: true, allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: sem-seccomp, namespace: feira}
+spec:
+  containers:
+    - name: c
+      image: postgres:16-alpine
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: sem-limite, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: postgres:16-alpine
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: registro-estranho, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: docker.io/atacante/minerador:1.0
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: tag-latest, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: ghcr.io/fabriciojunio/feira-servico-estoque:latest
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: sem-tag, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: ghcr.io/fabriciojunio/feira-servico-estoque
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: servico-como-root
+  namespace: feira
+  labels: {app: servico-pagamentos}
+spec:
+  automountServiceAccountToken: false
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: app
+      image: ghcr.io/fabriciojunio/feira-servico-pagamentos:0.1.0
+      resources: {requests: {cpu: 100m, memory: 256Mi}, limits: {memory: 512Mi}}
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities: {drop: ["ALL"]}
+---
+apiVersion: v1
+kind: Pod
+metadata: {name: digest-fixo, namespace: feira}
+spec:
+  securityContext: {seccompProfile: {type: RuntimeDefault}}
+  containers:
+    - name: c
+      image: postgres@sha256:0000000000000000000000000000000000000000000000000000000000000000
+      resources: {requests: {cpu: 100m, memory: 64Mi}, limits: {memory: 128Mi}}
+      securityContext: {allowPrivilegeEscalation: false}
