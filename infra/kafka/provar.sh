@@ -66,8 +66,7 @@ echo "Diagnóstico do rpk no broker:"
 echo "Usuários, tópicos e permissões"
 rpk security user create admin -p "$FEIRA_KAFKA_SENHA_ADMIN" --mechanism SCRAM-SHA-256 > /dev/null
 for servico in pedidos estoque pagamentos consulta; do
-  senha_var="FEIRA_KAFKA_SENHA_${servico^^}"
-  rpk security user create "$servico" -p "${!senha_var}" --mechanism SCRAM-SHA-256 > /dev/null
+  rpk security user create "$servico" -p "$(printenv "FEIRA_KAFKA_SENHA_${servico^^}")" --mechanism SCRAM-SHA-256 > /dev/null
 done
 # O usuário nasce pela API de administração e leva um instante para valer no
 # Kafka; antes disso a autenticação falha com ILLEGAL_SASL_STATE.
