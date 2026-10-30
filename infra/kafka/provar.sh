@@ -61,6 +61,10 @@ for servico in pedidos estoque pagamentos consulta; do
   senha_var="FEIRA_KAFKA_SENHA_${servico^^}"
   rpk security user create "$servico" -p "${!senha_var}" --mechanism SCRAM-SHA-256 > /dev/null
 done
+# O usuário nasce pela API de administração e leva um instante para valer no
+# Kafka; antes disso a autenticação falha com ILLEGAL_SASL_STATE.
+for _ in $(seq 1 30); do rpk topic list > /dev/null 2>&1 && break; sleep 1; done
+rpk topic list > /dev/null
 # Com o admin criado, a API de administração passa a exigir senha.
 rpk cluster config set admin_api_require_auth true > /dev/null
 
