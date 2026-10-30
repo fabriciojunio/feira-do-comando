@@ -47,7 +47,8 @@ services:
       - ./infra/kafka/certs:/certs:ro
       - ./infra/kafka/bootstrap.yaml:/bootstrap/bootstrap.yaml:ro
     # API de administração (9644) sem porta publicada; o Kafka só nesta máquina.
-    ports: !reset
+    # !override troca a lista; !reset só zeraria e ignoraria o valor abaixo.
+    ports: !override
       - "127.0.0.1:9092:9092"
 
   servico-pedidos:

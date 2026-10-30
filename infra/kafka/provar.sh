@@ -184,7 +184,7 @@ done
 if [ "$status" != CONFIRMADO ]; then
   for servico in servico-pagamentos servico-pedidos; do
     echo "       --- $servico"
-    "${COMPOSE[@]}" logs --no-color --tail=25 "$servico" 2>&1 | cut -c1-220 | sed 's/^/       /'
+    "${COMPOSE[@]}" logs --no-color "$servico" 2>&1       | grep -iE "dlq|DeadLetter|ilegivel|Exception|Caused by|denied|authoriz" | sort | uniq -c | sort -rn | head -20       | cut -c1-600 | sed 's/^/       /'
   done
 fi
 verificar "o pedido passou por estoque e pagamento e foi confirmado (status: $status)" [ "$status" = CONFIRMADO ]
