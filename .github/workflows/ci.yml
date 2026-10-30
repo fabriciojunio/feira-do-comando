@@ -136,7 +136,9 @@ jobs:
       - name: Rodar o Checkov
         run: |
           pipx run --spec checkov==3.3.29 checkov --quiet --compact             -d infra --framework terraform
-          pipx run --spec checkov==3.3.29 checkov --quiet --compact             -d k8s --framework kubernetes
+          # k8s/politicas/testes guarda pods ruins de propósito: são os casos que o
+          # Kyverno tem de recusar, e o teste dele prova que recusa.
+          pipx run --spec checkov==3.3.29 checkov --quiet --compact             -d k8s --framework kubernetes --skip-path k8s/politicas/testes
           pipx run --spec checkov==3.3.29 checkov --quiet --compact             -f Dockerfile --framework dockerfile
 
   terraform:
@@ -188,10 +190,26 @@ jobs:
 
       - name: Aplicar as políticas de admissão
         run: |
+          kubectl apply -f k8s/namespace.yaml
           kubectl apply -k k8s/politicas/
-          for p in sem-privilegio limites-de-recurso imagem-confiavel servico-restrito; do
-            kubectl wait --for=condition=Ready validatingpolicy/$p --timeout=120s
+          # Pronta é quando o servidor de API passa a recusar citando a política:
+          # até o webhook ser registrado, o pod privilegiado ainda seria aceito.
+          # Recusa por outro motivo (namespace inexistente, por exemplo) não conta.
+          for tentativa in $(seq 1 36); do
+            resposta=$(kubectl apply --dry-run=server -f - 2>&1 <<'POD' || true
+          apiVersion: v1
+          kind: Pod
+          metadata: {name: sonda-de-admissao, namespace: feira}
+          spec:
+            containers: [{name: c, image: postgres:16-alpine, securityContext: {privileged: true}}]
+          POD
+            )
+            if echo "$resposta" | grep -q "sem-privilegio"; then
+              echo "Admissão ativa na tentativa $tentativa: $resposta"; exit 0
+            fi
+            sleep 5
           done
+          echo "::error::As políticas não passaram a valer em 3 minutos."; exit 1
 
       # A base usa :latest como exemplo de leitura; o cluster recebe o overlay
       # com tag fixa, que é o que a política de imagem confiável aceita.
