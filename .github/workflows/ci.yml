@@ -102,6 +102,18 @@ jobs:
           tar xzf kubeconform.tar.gz kubeconform
           sudo mv kubeconform /usr/local/bin/
 
+      # Cada política tem caso que passa e caso que reprova (k8s/politicas/testes).
+      # Política sem teste quebra em silêncio, igual regra de Semgrep.
+      - name: Testar as políticas do Kyverno
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o kyverno.tar.gz https://github.com/kyverno/kyverno/releases/download/v1.19.2/kyverno-cli_v1.19.2_linux_x86_64.tar.gz
+          echo "357eaf1df8bc24ddd5a73979fadeaae6a032e8710f11af264229756e4956bf4a  kyverno.tar.gz" | sha256sum -c -
+          tar -xzf kyverno.tar.gz kyverno
+          cd "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/kyverno" test k8s/politicas/testes
+
       # O kustomization.yaml fica de fora porque nao e recurso da API do
       # Kubernetes: e configuracao da ferramenta, e o kubeconform corretamente
       # nao tem esquema para ele. Validar a saida renderizada do kustomize
@@ -169,8 +181,38 @@ jobs:
           cluster_name: feira
           wait: 120s
 
+      - name: Instalar o Kyverno
+        run: |
+          helm repo add kyverno https://kyverno.github.io/kyverno/
+          helm install kyverno kyverno/kyverno --version 3.9.2 -n kyverno --create-namespace --wait --timeout 5m
+
+      - name: Aplicar as políticas de admissão
+        run: |
+          kubectl apply -k k8s/politicas/
+          for p in sem-privilegio limites-de-recurso imagem-confiavel servico-restrito; do
+            kubectl wait --for=condition=Ready validatingpolicy/$p --timeout=120s
+          done
+
+      # A base usa :latest como exemplo de leitura; o cluster recebe o overlay
+      # com tag fixa, que é o que a política de imagem confiável aceita.
       - name: Aplicar os manifestos
-        run: kubectl apply -k k8s/
+        run: kubectl apply -k k8s/ci/
+
+      # Dry-run no servidor passa pela admissão de verdade, sem criar nada.
+      # Cada pod ruim tem de ser recusado; o correto, aceito.
+      - name: Provar que a admissão barra o que deve
+        run: |
+          set -uo pipefail
+          aceito=$(kubectl apply --dry-run=server -f k8s/politicas/testes/recursos.yaml 2>&1 || true)
+          echo "$aceito"
+          falhas=0
+          for ruim in rede-do-host privilegiado sem-seccomp sem-limite registro-estranho tag-latest sem-tag servico-como-root; do
+            if echo "$aceito" | grep -q "pod/$ruim created"; then echo "::error::$ruim passou pela admissão"; falhas=1; fi
+          done
+          for bom in servico-correto digest-fixo; do
+            echo "$aceito" | grep -q "pod/$bom created" || { echo "::error::$bom foi recusado"; falhas=1; }
+          done
+          exit $falhas
 
       - name: Esperar bancos e broker
         run: |
