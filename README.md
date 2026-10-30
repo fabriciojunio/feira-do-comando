@@ -274,6 +274,14 @@ login nem dado de usuário, e a fronteira de entrada já tem validação, testes
 ZAP. O orquestrador de CI é o GitHub Actions; Jenkins e GitLab CI rodariam a mesma esteira com
 as mesmas ferramentas.
 
+### Métricas do programa
+
+O [painel do programa](docs/seguranca/programa.md) junta os achados de todos os repositórios do
+portfólio num registro só e mostra, para quem decide, o tempo até corrigir por severidade, quanto
+ficou dentro do prazo, o que está aberto, a taxa de falso positivo e as exceções perto de vencer.
+O resultado de 30/10/2026 está em [`metricas.md`](docs/seguranca/metricas.md), incluindo o que
+não foi bem: os achados críticos levaram 17 dias para ser corrigidos, e o prazo é de 7.
+
 ## O que não está aqui
 
 Dito de uma vez, em vez de descoberto depois:
