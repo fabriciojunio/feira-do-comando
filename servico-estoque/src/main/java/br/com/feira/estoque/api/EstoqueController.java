@@ -7,6 +7,7 @@ import br.com.feira.estoque.infraestrutura.persistencia.ReservaRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,11 +18,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 /**
@@ -63,7 +64,7 @@ public class EstoqueController {
     @GetMapping("/itens/{sku}")
     public SaldoVisto consultar(@PathVariable String sku) {
         return itens.findById(sku).map(SaldoVisto::de)
-                .orElseThrow(() -> new NoSuchElementException("sku nao encontrado"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "sku nao encontrado"));
     }
 
     /** Itens perto de acabar, para quem cuida da reposicao. */
@@ -72,7 +73,9 @@ public class EstoqueController {
         return itens.abaixoDe(limite).stream().map(SaldoVisto::de).toList();
     }
 
-    public record NovoItem(@NotBlank String sku, @NotBlank String descricao,
+    /** Os tamanhos são os das colunas: passar disso estourava no banco com 500. */
+    public record NovoItem(@NotBlank @Size(max = 60) String sku,
+                           @NotBlank @Size(max = 200) String descricao,
                            @Min(0) int quantidade) {
     }
 
@@ -105,7 +108,7 @@ public class EstoqueController {
         return reservas.findById(pedidoId)
                 .map(r -> new ReservaVista(r.pedidoId().toString(), r.situacao().name(),
                         r.linhas().stream().map(l -> l.sku() + " x" + l.quantidade()).toList()))
-                .orElseThrow(() -> new NoSuchElementException("reserva nao encontrada"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "reserva nao encontrada"));
     }
 
     @GetMapping("/reservas")
