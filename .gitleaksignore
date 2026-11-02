@@ -4,9 +4,13 @@
 # commit seguinte; este registro cobre só o commit em que ela entrou.
 ef3ff57653bd1a36514fffc1ccaedd5995afa72f:infra/kafka/provar.sh:senha-com-simbolo:61
 
-# Senha plantada de propósito na branch de prova dos portões (PR #5), que existe
-# para mostrar que o gitleaks barra segredo no código. O valor é fictício e a
-# branch nunca vai para produção. O scan agendado varre o histórico de todas as
-# branches e a encontrava; a própria branch de prova usa o .gitleaksignore dela,
-# sem este registro, então lá o gitleaks continua reprovando, como deve.
+# Senha fictícia plantada de propósito na branch de prova dos portões (PR #5),
+# que existe para mostrar que o gitleaks barra segredo no código. O repositório é
+# público e o scan agendado varre o histórico de todas as branches, o que é o
+# certo; ele achava o valor em dois commits da branch, o original e a cópia
+# reescrita no acerto de acentos. As duas ocorrências ficam aceitas aqui, e só
+# elas: qualquer outro achado continua reprovando. A evidência da prova são as
+# execuções vermelhas já registradas no PR #5; uma nova execução daquele PR roda
+# sobre o merge com produção e também enxergaria este aceite.
 8cca6cfc89744cc32656ba246978c8fb5070f276:servico-pedidos/src/main/java/br/com/feira/pedidos/plantado/RelatorioPlantado.java:senha-com-simbolo:28
+b4f886223641a9b27a68e381f2c2e5d8778ecb3e:servico-pedidos/src/main/java/br/com/feira/pedidos/plantado/RelatorioPlantado.java:senha-com-simbolo:28
