@@ -293,7 +293,7 @@ that job ads mention are left out on purpose, and the table says what each would
 |---|---|---|---|
 | SAST | reads the code without running it | Semgrep with 6 tested in-house rules, CodeQL | Checkmarx, Veracode, Fortify |
 | SCA and SBOM | dependencies with known vulnerabilities | OSV-Scanner, SPDX and CycloneDX SBOM, Grype | Snyk, Black Duck, Sonatype |
-| DAST | attacks the running app from the outside | ZAP baseline against the deployed system | Burp Suite Enterprise, Invicti |
+| DAST | attacks the running app from the outside | ZAP against the orders, stock and payments APIs, driven by their OpenAPI, with the system running | Burp Suite Enterprise, Invicti |
 | Admission and runtime | blocks what gets deployed and watches what runs | Kyverno in the cluster, Falco rules | Wiz, Prisma Cloud, Sysdig |
 | IAST | in-app agent during tests that sees a request reach a dangerous sink | not used | Contrast Assess, Seeker |
 | RASP | in-app agent in production that blocks the attack as it happens | not used | Contrast Protect, Imperva RASP |

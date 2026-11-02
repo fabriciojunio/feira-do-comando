@@ -263,7 +263,7 @@ ficam de fora de propósito, e a tabela diz o que cada uma acrescentaria.
 |---|---|---|---|
 | SAST | lê o código sem executar | Semgrep com 6 regras próprias testadas e CodeQL | Checkmarx, Veracode, Fortify |
 | SCA e SBOM | dependência com vulnerabilidade conhecida | OSV-Scanner, SBOM SPDX e CycloneDX, Grype | Snyk, Black Duck, Sonatype |
-| DAST | ataca a aplicação rodando, de fora | ZAP baseline no sistema subido | Burp Suite Enterprise, Invicti |
+| DAST | ataca a aplicação rodando, de fora | ZAP nas APIs de pedidos, estoque e pagamentos, guiado pelo OpenAPI, com o sistema subido | Burp Suite Enterprise, Invicti |
 | Admissão e runtime | barra o que sobe e vigia o que roda | Kyverno no cluster, regras Falco | Wiz, Prisma Cloud, Sysdig |
 | IAST | agente dentro da aplicação durante os testes, que vê a requisição chegar ao ponto perigoso | não usado | Contrast Assess, Seeker |
 | RASP | agente dentro da aplicação em produção, que bloqueia o ataque na hora | não usado | Contrast Protect, Imperva RASP |
