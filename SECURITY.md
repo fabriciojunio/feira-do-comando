@@ -60,3 +60,5 @@ Cada aceite tem motivo e data. Vencida a data, o portão volta a reprovar.
 | [`osv-scanner.toml`](osv-scanner.toml) | GHSA-pc63-qcmh-9cmg (CVE-2026-47884) | exige `XsltView`; o projeto não renderiza view | 28/01/2027 |
 | [`.gitleaksignore`](.gitleaksignore) | `senha-com-simbolo` em três commits | um nome de variável lido como senha, e a senha fictícia da branch de prova | sem data: o valor não é segredo |
 | [`.zap/regras.tsv`](.zap/regras.tsv) | Spring Actuator Information Leak | `/actuator/health` mostra só o status e os grupos, que as sondas do Kubernetes leem | revisto a cada mudança de configuração |
+| [`.zap/regras.tsv`](.zap/regras.tsv) | Unexpected Content-Type | HTML só na página de erro padrão, sem mensagem nem pilha, e no Swagger UI; a API responde JSON | revisto a cada mudança de configuração |
+| [`.zap/regras.tsv`](.zap/regras.tsv) | XSS persistente em resposta JSON (confiança baixa) | o texto volta dentro de JSON com `nosniff`, que o navegador não executa | revisto a cada mudança de configuração |

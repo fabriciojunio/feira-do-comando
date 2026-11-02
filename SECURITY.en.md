@@ -60,3 +60,5 @@ Each acceptance has a reason and a date. When the date passes, the gate fails ag
 | [`osv-scanner.toml`](osv-scanner.toml) | GHSA-pc63-qcmh-9cmg (CVE-2026-47884) | requires `XsltView`; the project renders no views | 2027-01-28 |
 | [`.gitleaksignore`](.gitleaksignore) | `senha-com-simbolo` in three commits | a variable name read as a password, and the fictitious password in the proof branch | no date: the value is not a secret |
 | [`.zap/regras.tsv`](.zap/regras.tsv) | Spring Actuator Information Leak | `/actuator/health` only shows status and groups, which the Kubernetes probes read | reviewed on every configuration change |
+| [`.zap/regras.tsv`](.zap/regras.tsv) | Unexpected Content-Type | HTML only on the default error page, with no message or stack, and on Swagger UI; the API answers JSON | reviewed on every configuration change |
+| [`.zap/regras.tsv`](.zap/regras.tsv) | Persistent XSS in JSON response (low confidence) | the text comes back inside JSON with `nosniff`, which browsers do not execute | reviewed on every configuration change |
