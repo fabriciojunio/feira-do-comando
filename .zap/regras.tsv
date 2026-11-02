@@ -1,2 +1,3 @@
 # Regras do ZAP: id<TAB>IGNORE|WARN|FAIL<TAB>motivo
-# Sem aceite por enquanto: cada IGNORE entra com o motivo, depois de triado.
+# Cada IGNORE foi triado em 02/11/2026 contra o sistema subido na CI.
+40042	IGNORE	/actuator/health devolve so status e os grupos liveness e readiness, sem detalhe (show-details when-authorized); e o que as sondas do Kubernetes leem
