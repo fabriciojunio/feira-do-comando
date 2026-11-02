@@ -3,3 +3,10 @@
 # gerada a cada execução do provar.sh. A linha foi reescrita sem atribuição no
 # commit seguinte; este registro cobre só o commit em que ela entrou.
 ef3ff57653bd1a36514fffc1ccaedd5995afa72f:infra/kafka/provar.sh:senha-com-simbolo:61
+
+# Senha plantada de propósito na branch de prova dos portões (PR #5), que existe
+# para mostrar que o gitleaks barra segredo no código. O valor é fictício e a
+# branch nunca vai para produção. O scan agendado varre o histórico de todas as
+# branches e a encontrava; a própria branch de prova usa o .gitleaksignore dela,
+# sem este registro, então lá o gitleaks continua reprovando, como deve.
+8cca6cfc89744cc32656ba246978c8fb5070f276:servico-pedidos/src/main/java/br/com/feira/pedidos/plantado/RelatorioPlantado.java:senha-com-simbolo:28
