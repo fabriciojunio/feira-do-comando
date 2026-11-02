@@ -5,14 +5,21 @@ import br.com.feira.plataforma.mensageria.Falhas;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.ErrorResponse;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.net.URI;
 import java.time.Clock;
@@ -122,6 +129,36 @@ public class TratadorDeErros {
         return problema(HttpStatus.SERVICE_UNAVAILABLE, "ainda-processando",
                 "Pedido ainda esta sendo registrado", e.getMessage(), "AINDA_PROCESSANDO",
                 requisicao);
+    }
+
+    /**
+     * Valor de rota ou de parâmetro que não converte, como id que não é UUID ou
+     * página que não é número. A mensagem do Spring traz o tipo Java: fica no log.
+     */
+    @ExceptionHandler(TypeMismatchException.class)
+    public ProblemDetail tipoErrado(TypeMismatchException e, HttpServletRequest requisicao) {
+        log.info("Parametro com tipo errado em {} {}: {}", requisicao.getMethod(),
+                semQuebraDeLinha(requisicao.getRequestURI()), semQuebraDeLinha(e.getMessage()));
+        return problema(HttpStatus.BAD_REQUEST, "requisicao-invalida",
+                "Nao foi possivel ler a requisicao",
+                "Um valor da rota ou dos parametros nao esta no formato esperado.",
+                "REQUISICAO_INVALIDA", requisicao);
+    }
+
+    /**
+     * Erro que o próprio Spring já classifica: rota inexistente (404), método
+     * que a rota não aceita (405), tipo de conteúdo não aceito (415). Sem isto o
+     * tratador genérico abaixo pegava todos e devolvia 500; o primeiro DAST
+     * achou 28 casos.
+     */
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class,
+            HttpRequestMethodNotSupportedException.class,
+            HttpMediaTypeNotSupportedException.class, MissingServletRequestParameterException.class})
+    public ProblemDetail erroDoCliente(Exception e, HttpServletRequest requisicao) {
+        var status = HttpStatus.valueOf(((ErrorResponse) e).getStatusCode().value());
+        return problema(status, "requisicao-invalida", status.getReasonPhrase(),
+                "A requisicao nao corresponde a nenhuma operacao desta API.",
+                "REQUISICAO_INVALIDA", requisicao);
     }
 
     @ExceptionHandler(Exception.class)

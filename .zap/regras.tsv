@@ -1,0 +1,5 @@
+# Regras do ZAP: id<TAB>IGNORE|WARN|FAIL<TAB>motivo
+# Cada IGNORE foi triado em 02/11/2026 contra o sistema subido na CI.
+40042	IGNORE	/actuator/health devolve so status e os grupos liveness e readiness, sem detalhe (show-details when-authorized); e o que as sondas do Kubernetes leem
+100001	IGNORE	HTML so na pagina de erro padrao do Spring, quando o cliente pede text/html numa rota que nao existe, e no Swagger UI; a pagina nao traz mensagem nem pilha (include-message e include-stacktrace never) e a API responde JSON
+40014	IGNORE	Confianca baixa no proprio ZAP: o texto volta dentro de JSON com application/json e nosniff, que o navegador nao executa; o front React escapa o valor ao exibir
