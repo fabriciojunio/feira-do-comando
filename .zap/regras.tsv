@@ -1,0 +1,2 @@
+# Regras do ZAP: id<TAB>IGNORE|WARN|FAIL<TAB>motivo
+# Sem aceite por enquanto: cada IGNORE entra com o motivo, depois de triado.

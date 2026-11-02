@@ -1,0 +1,69 @@
+name: DAST
+
+# Ataca as APIs rodando, de fora, com o OWASP ZAP. Sobe o sistema inteiro como
+# o job de carga e varre cada serviço a partir do próprio contrato OpenAPI, que
+# o springdoc publica: assim o ZAP conhece todas as rotas e parâmetros, em vez
+# de depender de um rastreador que não acha nada numa API sem HTML.
+#
+# O servico-consulta fica de fora: não publica OpenAPI e só lê a projeção, sem
+# entrada além do id na rota.
+on:
+  pull_request:
+    branches: ["produção"]
+  push:
+    branches: ["produção"]
+  schedule:
+    - cron: "0 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  zap:
+    name: OWASP ZAP nas APIs
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Subir o sistema
+        run: docker compose up -d --wait --wait-timeout 300
+
+      - name: Pedidos
+        uses: zaproxy/action-api-scan@5158fe4d9d8fcc75ea204db81317cce7f9e5453d # v0.10.0
+        with:
+          target: "http://localhost:8081/v3/api-docs"
+          format: openapi
+          rules_file_name: ".zap/regras.tsv"
+          allow_issue_writing: false
+          fail_action: true
+          artifact_name: zap-pedidos
+
+      - name: Estoque
+        if: success() || failure()
+        uses: zaproxy/action-api-scan@5158fe4d9d8fcc75ea204db81317cce7f9e5453d # v0.10.0
+        with:
+          target: "http://localhost:8082/v3/api-docs"
+          format: openapi
+          rules_file_name: ".zap/regras.tsv"
+          allow_issue_writing: false
+          fail_action: true
+          artifact_name: zap-estoque
+
+      - name: Pagamentos
+        if: success() || failure()
+        uses: zaproxy/action-api-scan@5158fe4d9d8fcc75ea204db81317cce7f9e5453d # v0.10.0
+        with:
+          target: "http://localhost:8083/v3/api-docs"
+          format: openapi
+          rules_file_name: ".zap/regras.tsv"
+          allow_issue_writing: false
+          fail_action: true
+          artifact_name: zap-pagamentos
+
+      - name: Log dos serviços quando falha
+        if: failure()
+        run: docker compose logs --tail 200
