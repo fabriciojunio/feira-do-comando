@@ -271,8 +271,11 @@ ficam de fora de propósito, e a tabela diz o que cada uma acrescentaria.
 
 IAST e RASP dependem de agente pago na JVM, e o que eles pegam a mais aqui seria pouco: não há
 login nem dado de usuário, e a fronteira de entrada já tem validação, testes de contrato e o
-ZAP. O orquestrador de CI é o GitHub Actions; Jenkins e GitLab CI rodariam a mesma esteira com
-as mesmas ferramentas.
+ZAP. O orquestrador principal é o GitHub Actions, com a esteira completa. Os gates centrais (build
+e teste, SAST com as regras próprias, segredo e dependência) estão espelhados em
+[`.gitlab-ci.yml`](.gitlab-ci.yml) para o GitLab CI e [`azure-pipelines.yml`](azure-pipelines.yml)
+para o Azure Pipelines, com as mesmas ferramentas e versões, para mostrar que a esteira não depende
+de uma plataforma só.
 
 ### Métricas do programa
 

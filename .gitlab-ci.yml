@@ -1,0 +1,66 @@
+# Espelho da esteira no GitLab CI, com as mesmas ferramentas e versões do GitHub
+# Actions. A esteira completa (cluster kind, Kafka fechado, carga, Falco, SBOM
+# assinado) fica no GitHub; aqui estão os gates centrais, que são os que travam
+# um merge: build e teste, SAST com as regras próprias, segredo e dependência.
+stages:
+  - teste
+  - seguranca
+
+default:
+  interruptible: true
+
+maven-teste:
+  stage: teste
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - mvn -B verify
+  artifacts:
+    when: always
+    paths:
+      - "**/target/surefire-reports/"
+    expire_in: 7 days
+
+sbom:
+  stage: teste
+  image: maven:3.9-eclipse-temurin-21
+  script:
+    - mvn -B -q org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeAggregateBom -DoutputFormat=json -DoutputName=bom.cdx
+  artifacts:
+    paths:
+      - target/bom.cdx.json
+    expire_in: 1 day
+
+semgrep:
+  stage: seguranca
+  image: semgrep/semgrep:1.181.0
+  script:
+    # As regras próprias têm teste: cada uma prova o que pega e o que não pega.
+    - semgrep --test --metrics=off --config .semgrep/regras .semgrep/testes
+    - >
+      semgrep scan --metrics=off --error
+      --config p/java --config p/owasp-top-ten --config p/secrets --config p/security-audit
+      --config .semgrep/regras
+      --exclude .semgrep --exclude target --exclude node_modules --exclude web .
+
+segredos:
+  stage: seguranca
+  image:
+    name: ghcr.io/gitleaks/gitleaks:v8.24.3
+    entrypoint: [""]
+  variables:
+    # O gitleaks varre o histórico inteiro; sem profundidade total ele não vê
+    # o commit antigo que vazou um segredo.
+    GIT_DEPTH: "0"
+  script:
+    - gitleaks git --redact --no-banner -v .
+
+dependencias:
+  stage: seguranca
+  image:
+    name: ghcr.io/google/osv-scanner:v2.7.0
+    entrypoint: [""]
+  needs:
+    - sbom
+  script:
+    # Mesmos aceites do GitHub (osv-scanner.toml); aceite vencido volta a reprovar.
+    - /osv-scanner --config=osv-scanner.toml -L target/bom.cdx.json -L web/package-lock.json
