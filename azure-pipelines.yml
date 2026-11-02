@@ -1,0 +1,78 @@
+# Espelho da esteira no Azure Pipelines, com as mesmas ferramentas e versões do
+# GitHub Actions. A esteira completa fica no GitHub; aqui estão os gates centrais
+# que travam um merge: build e teste, SAST com as regras próprias, segredo e
+# dependência.
+trigger:
+  branches:
+    include:
+      - produção
+      - homologação
+pr:
+  branches:
+    include:
+      - produção
+      - homologação
+
+stages:
+  - stage: teste
+    displayName: Build e testes
+    jobs:
+      - job: maven
+        pool:
+          vmImage: ubuntu-latest
+        container: maven:3.9-eclipse-temurin-21
+        steps:
+          - script: mvn -B verify
+            displayName: Testes
+          - script: mvn -B -q org.cyclonedx:cyclonedx-maven-plugin:2.9.3:makeAggregateBom -DoutputFormat=json -DoutputName=bom.cdx
+            displayName: Gerar o SBOM
+          - publish: target/bom.cdx.json
+            artifact: sbom
+
+  - stage: seguranca
+    displayName: Segurança
+    dependsOn: teste
+    jobs:
+      - job: semgrep
+        displayName: SAST (Semgrep, regras próprias)
+        pool:
+          vmImage: ubuntu-latest
+        container: semgrep/semgrep:1.181.0
+        steps:
+          - script: semgrep --test --metrics=off --config .semgrep/regras .semgrep/testes
+            displayName: Testar as regras próprias
+          - script: >
+              semgrep scan --metrics=off --error
+              --config p/java --config p/owasp-top-ten --config p/secrets --config p/security-audit
+              --config .semgrep/regras
+              --exclude .semgrep --exclude target --exclude node_modules --exclude web .
+            displayName: Varrer
+
+      - job: segredos
+        displayName: Varredura de segredos (gitleaks)
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+            fetchDepth: 0
+          - script: >
+              docker run --rm -v "$(Build.SourcesDirectory):/src" -w /src
+              --entrypoint gitleaks ghcr.io/gitleaks/gitleaks:v8.24.3
+              git --redact --no-banner -v .
+            displayName: gitleaks
+
+      - job: dependencias
+        displayName: Vulnerabilidades em dependências (osv-scanner)
+        dependsOn: []
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - download: current
+            artifact: sbom
+          - script: >
+              docker run --rm
+              -v "$(Pipeline.Workspace)/sbom:/sbom"
+              -v "$(Build.SourcesDirectory):/src" -w /src
+              ghcr.io/google/osv-scanner:v2.7.0
+              --config=osv-scanner.toml -L /sbom/bom.cdx.json -L web/package-lock.json
+            displayName: osv-scanner

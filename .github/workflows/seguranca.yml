@@ -87,6 +87,15 @@ jobs:
           python3 -m unittest scripts/test_metricas_do_programa.py -v
           python3 scripts/metricas_do_programa.py docs/seguranca/achados.csv \
             --aceites feira-do-comando=osv-scanner.toml >> "$GITHUB_STEP_SUMMARY"
+      # O painel de métricas sai do mesmo registro. O teste prova o formato
+      # Prometheus; a geração reprova se o CSV estiver inconsistente; e o JSON do
+      # dashboard do Grafana precisa ser válido.
+      - name: Painel de métricas (Prometheus e Grafana)
+        run: |
+          python3 -m unittest scripts/test_metricas_prometheus.py -v
+          python3 scripts/metricas_prometheus.py docs/seguranca/achados.csv \
+            --aceites feira-do-comando=osv-scanner.toml --saida /tmp/metricas.prom
+          python3 -c "import json; json.load(open('observabilidade/grafana/dashboards/appsec-programa.json', encoding='utf-8'))"
       # O SBOM sai dos jars de verdade, com as transitivas que vão para a imagem.
       - name: Empacotar os serviços
         run: mvn -B -q package -DskipTests
