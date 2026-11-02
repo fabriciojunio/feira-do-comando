@@ -1,0 +1,98 @@
+{
+  "uid": "appsec-programa",
+  "title": "Programa de AppSec",
+  "tags": ["seguranca", "appsec"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "time": { "from": "now-6h", "to": "now" },
+  "templating": { "list": [] },
+  "annotations": { "list": [] },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Achados registrados",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "appsec_achados_total" }],
+      "fieldConfig": { "defaults": { "color": { "mode": "thresholds" } }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Abertos",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "sum(appsec_achados{desfecho=\"aberto\"})" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "gauge",
+      "title": "SLA cumprido (crítica e alta)",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "avg(appsec_sla_cumprido_proporcao{severidade=~\"critica|alta\"})" }],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit", "min": 0, "max": 1,
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "orange", "value": 0.9 },
+            { "color": "green", "value": 1 }
+          ] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Exceções de risco vencidas",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "appsec_excecoes{situacao=\"vencido\"}" }],
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 1 }
+          ] }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "barchart",
+      "title": "MTTR por severidade (dias)",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "appsec_mttr_dias", "legendFormat": "{{severidade}}", "instant": true }],
+      "fieldConfig": { "defaults": { "unit": "d" }, "overrides": [] }
+    },
+    {
+      "type": "barchart",
+      "title": "Backlog aberto por severidade",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 4 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "appsec_achados{desfecho=\"aberto\"}", "legendFormat": "{{severidade}}", "instant": true }],
+      "fieldConfig": { "defaults": {}, "overrides": [] }
+    },
+    {
+      "type": "timeseries",
+      "title": "SLA cumprido por severidade",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 13 },
+      "datasource": { "type": "prometheus", "uid": "prometheus-appsec" },
+      "targets": [{ "refId": "A", "expr": "appsec_sla_cumprido_proporcao", "legendFormat": "{{severidade}}" }],
+      "fieldConfig": { "defaults": { "unit": "percentunit", "min": 0, "max": 1 }, "overrides": [] }
+    }
+  ]
+}

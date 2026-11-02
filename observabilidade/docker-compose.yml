@@ -1,0 +1,59 @@
+# Stack do painel de métricas do programa de AppSec, para rodar local:
+#
+#   docker compose -f observabilidade/docker-compose.yml up
+#   Grafana em http://localhost:3000 (admin / a senha do GF_SECURITY_ADMIN_PASSWORD)
+#
+# O exportador lê o mesmo docs/seguranca/achados.csv do resumo em Markdown e
+# serve as métricas em /metrics; o Prometheus raspa; o Grafana já sobe com a
+# fonte e o painel provisionados. Imagens fixadas por digest.
+services:
+  exportador:
+    image: python:3.12.11-slim-bookworm@sha256:519591d6871b7bc437060736b9f7456b8731f1499a57e22e6c285135ae657bf7
+    working_dir: /app/scripts
+    command:
+      - python
+      - metricas_prometheus.py
+      - ../docs/seguranca/achados.csv
+      - --aceites
+      - feira-do-comando=../osv-scanner.toml
+      - --servir
+      - "9114"
+    volumes:
+      - ../:/app:ro
+    read_only: true
+    user: "10001:10001"
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    networks: [observabilidade]
+
+  prometheus:
+    image: prom/prometheus:v3.6.0@sha256:76947e7ef22f8a698fc638f706685909be425dbe09bd7a2cd7aca849f79b5f64
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-dados:/prometheus
+    depends_on: [exportador]
+    networks: [observabilidade]
+
+  grafana:
+    image: grafana/grafana:12.2.0@sha256:74144189b38447facf737dfd0f3906e42e0776212bf575dc3334c3609183adf7
+    environment:
+      # Senha de ambiente local; em qualquer lugar de verdade vem de um cofre.
+      GF_SECURITY_ADMIN_PASSWORD: troque-esta-senha-no-ambiente
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-dados:/var/lib/grafana
+    depends_on: [prometheus]
+    networks: [observabilidade]
+
+volumes:
+  prometheus-dados:
+  grafana-dados:
+
+networks:
+  observabilidade:

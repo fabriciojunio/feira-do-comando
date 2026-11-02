@@ -6,6 +6,9 @@ O [`metricas.md`](metricas.md) mostra como o programa está indo, para quem deci
 alerta de ferramenta: tempo até corrigir por severidade, quanto disso ficou dentro do prazo, o que
 está aberto, quantos achados eram falsos positivos e quais exceções estão perto de vencer.
 
+O mesmo registro alimenta um painel no Grafana, com Prometheus, para quem acompanha o dia a dia. O
+stack e como rodar estão em [`observabilidade/`](../../observabilidade/README.md).
+
 ## De onde vêm os números
 
 - [`achados.csv`](achados.csv): um achado por linha, de todos os repositórios do programa, com
