@@ -46,7 +46,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         // Só a observabilidade da plataforma, e não ela inteira: este serviço
         // não tem banco relacional, então outbox e inbox não fazem sentido
         // aqui e arrastariam JPA junto.
-        "br.com.feira.plataforma.observabilidade"})
+        "br.com.feira.plataforma.observabilidade",
+        "br.com.feira.plataforma.web"})
 @EnableScheduling
 public class Aplicacao {
 
