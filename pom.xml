@@ -39,7 +39,7 @@
       migrar para o Boot 4, este bloco inteiro sai.
     -->
     <jackson-corrigido.version>2.21.7</jackson-corrigido.version>
-    <log4j-corrigido.version>2.25.5</log4j-corrigido.version>
+    <log4j-corrigido.version>2.26.1</log4j-corrigido.version>
     <opentelemetry-corrigido.version>1.67.0</opentelemetry-corrigido.version>
     <tomcat-corrigido.version>10.1.59</tomcat-corrigido.version>
     <postgresql-corrigido.version>42.7.12</postgresql-corrigido.version>
