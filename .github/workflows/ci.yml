@@ -17,7 +17,9 @@ permissions:
 jobs:
   build:
     name: Build e testes
-    runs-on: ubuntu-latest
+    # Fixo: o MongoDB embutido do teste baixa o pacote pela versão do Ubuntu,
+    # e o flapdoodle 4.20 não conhece o 26.04 que o ubuntu-latest passou a usar.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
