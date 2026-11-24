@@ -5,7 +5,7 @@
 #
 #   docker build --build-arg MODULO=servico-estoque -t feira-estoque .
 
-FROM maven:3.9-eclipse-temurin-21 AS construcao
+FROM maven:3.9-eclipse-temurin-26 AS construcao
 ARG MODULO
 WORKDIR /app
 
