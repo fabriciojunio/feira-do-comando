@@ -29,7 +29,7 @@
     <postgres.embutido.version>16.2.0</postgres.embutido.version>
     <archunit.version>1.3.0</archunit.version>
     <jacoco.version>0.8.12</jacoco.version>
-    <springdoc.version>2.8.6</springdoc.version>
+    <springdoc.version>3.2.0</springdoc.version>
     <resilience4j.version>2.2.0</resilience4j.version>
 
     <!--
