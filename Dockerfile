@@ -34,7 +34,7 @@ COPY ${MODULO}/src ${MODULO}/src
 RUN mvn -B -q package -pl ${MODULO} -am -Dmaven.test.skip=true \
     && cp ${MODULO}/target/*.jar /app/aplicacao.jar
 
-FROM eclipse-temurin:21-jre-alpine AS execucao
+FROM eclipse-temurin:24-jre-alpine AS execucao
 WORKDIR /app
 
 # Container que roda como root e um convite: qualquer execucao remota vira
