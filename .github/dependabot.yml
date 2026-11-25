@@ -15,6 +15,11 @@ updates:
       default-days: 7
     commit-message:
       prefix: "build(deps)"
+    ignore:
+      # Versão principal muda API e entra como migração planejada e testada. Correção de
+      # segurança não passa por aqui e continua vindo.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "npm"
     directory: "/web"
     schedule:
@@ -28,6 +33,11 @@ updates:
       default-days: 7
     commit-message:
       prefix: "build(deps)"
+    ignore:
+      # Versão principal muda API e entra como migração planejada e testada. Correção de
+      # segurança não passa por aqui e continua vindo.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
@@ -41,6 +51,11 @@ updates:
       default-days: 7
     commit-message:
       prefix: "build(deps)"
+    ignore:
+      # Versão principal muda API e entra como migração planejada e testada. Correção de
+      # segurança não passa por aqui e continua vindo.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "terraform"
     directory: "/infra"
     schedule:
@@ -54,6 +69,11 @@ updates:
       default-days: 7
     commit-message:
       prefix: "build(deps)"
+    ignore:
+      # Versão principal muda API e entra como migração planejada e testada. Correção de
+      # segurança não passa por aqui e continua vindo.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
